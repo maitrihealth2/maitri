@@ -4,7 +4,6 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 const api = axios.create({ baseURL: API_URL })
 
-// Auto-attach JWT token from localStorage
 api.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
     const token = localStorage.getItem('mb_token')
@@ -15,7 +14,6 @@ api.interceptors.request.use((config) => {
 
 export default api
 
-// ─── Auth ────────────────────────────────────────────────────────────────────
 export async function register(username: string, email: string, password: string, language = 'en-IN') {
   const res = await api.post('/api/auth/register', { username, email, password, preferred_language: language })
   return res.data
@@ -31,7 +29,6 @@ export async function getMe() {
   return res.data
 }
 
-// ─── Consultation ─────────────────────────────────────────────────────────────
 export async function startSession() {
   const res = await api.post('/api/consultation/start')
   return res.data

@@ -1,7 +1,53 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { getHistory, getTranscript } from '../../lib/api'
+
+/**
+ * modernised History Page — Next.js 15 + Tailwind 4
+ * consistent with Consultation and Login aesthetics
+ * premium glass session cards
+ */
+
+// ── Icons ─────────────────────────────────────────────────────────────────────
+const BackIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+    <path d="m15 18-6-6 6-6" />
+  </svg>
+)
+
+const NewIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+    <path d="M5 12h14m-7-7v14" />
+  </svg>
+)
+
+const ChevronRight = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+    <path d="m9 18 6-6-6-6" />
+  </svg>
+)
+
+const SessionIcon = ({ crisis }: { crisis?: boolean }) => (
+  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl transition-all ${
+    crisis ? 'bg-secondary/10 border border-secondary/20 text-secondary shadow-lg shadow-secondary/5' : 'bg-primary/10 border border-primary/20 text-primary shadow-lg shadow-primary/5'
+  }`}>
+    {crisis ? '🌸' : '💬'}
+  </div>
+)
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const toIST = (d: string) => {
+  try {
+    const ist = new Date(new Date(d).getTime() + 5.5 * 60 * 60 * 1000)
+    return ist.toLocaleDateString('en-IN', {
+      day: 'numeric', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', hour12: true,
+    }) + ' IST'
+  } catch {
+    return d
+  }
+}
 
 export default function HistoryPage() {
   const router = useRouter()
@@ -12,110 +58,177 @@ export default function HistoryPage() {
   const [loadingTranscript, setLoadingTranscript] = useState(false)
 
   useEffect(() => {
-    const token = localStorage.getItem('mb_token')
-    if (!token) { router.push('/'); return }
-    getHistory().then(data => {
-      const seen = new Set()
-      const unique = data.filter((s: any) => {
-        if (seen.has(s.session_id)) return false
-        seen.add(s.session_id); return true
+    const token = typeof window !== 'undefined' ? localStorage.getItem('mb_token') : null
+    if (!token) { router.replace('/'); return }
+    
+    getHistory()
+      .then(data => {
+        const seen = new Set<string>()
+        const filtered = data.filter((s: any) => {
+          if (seen.has(s.session_id)) return false
+          seen.add(s.session_id); return true
+        })
+        setSessions(filtered)
       })
-      setSessions(unique)
-    }).finally(() => setLoading(false))
+      .catch(() => {})
+      .finally(() => setLoading(false))
   }, [])
 
-  const toIST = (d: string) => {
-    const ist = new Date(new Date(d).getTime() + 5.5 * 60 * 60 * 1000)
-    return ist.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }) + ' IST'
-  }
-
   const openSession = async (s: any) => {
-    setSelected(s); setLoadingTranscript(true); setTranscript(null)
-    try { setTranscript(await getTranscript(s.session_id)) }
-    catch { setTranscript({ messages: [] }) }
-    finally { setLoadingTranscript(false) }
+    setSelected(s)
+    setLoadingTranscript(true)
+    setTranscript(null)
+    try { 
+      const data = await getTranscript(s.session_id)
+      setTranscript(data) 
+    } catch { 
+      setTranscript({ messages: [] }) 
+    } finally { 
+      setLoadingTranscript(false) 
+    }
   }
 
-  // ── Transcript View ────────────────────────────────────────────────────────
+  // ── Transcript View ───────────────────────────────────────────────────────
   if (selected) return (
-    <div style={{ minHeight: '100vh', background: '#f0f4ff', fontFamily: "'DM Sans', sans-serif" }}>
-      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 90, background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(16px)', borderBottom: '1px solid #e2e8ff', padding: '14px 28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <button onClick={() => { setSelected(null); setTranscript(null) }} style={{ padding: '7px 16px', background: '#e8eeff', color: '#4f74f9', border: 'none', borderRadius: 100, fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
-            ← Back
+    <div className="min-h-screen bg-bg-dark flex flex-col">
+      <nav className="fixed top-0 left-0 right-0 h-18 z-50 glass border-b border-white/5 px-6 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => { setSelected(null); setTranscript(null) }}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface-dark/50 border border-white/5 text-text-muted hover:text-text-bright hover:bg-surface-dark transition-all outline-none text-xs font-bold"
+          >
+            <BackIcon /> Back
           </button>
-          <div style={{ fontSize: 13, color: '#9aa0c0' }}>{toIST(selected.started_at)}</div>
-        </div>
-        {selected.is_crisis_flagged && <span style={{ fontSize: 12, color: '#e855a8', fontWeight: 500 }}>🌸 Crisis support provided</span>}
-      </div>
-
-      <div style={{ maxWidth: 760, margin: '0 auto', padding: '100px 24px 60px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-        {loadingTranscript && <div style={{ textAlign: 'center', color: '#9aa0c0', fontSize: 13, marginTop: 60 }}>Loading transcript...</div>}
-        {transcript?.messages?.length === 0 && <div style={{ textAlign: 'center', color: '#9aa0c0', fontSize: 13, marginTop: 60 }}>No messages in this session.</div>}
-        {transcript?.messages?.map((msg: any, i: number) => (
-          <div key={i} style={{ display: 'flex', gap: 10, flexDirection: msg.role === 'user' ? 'row-reverse' : 'row' }}>
-            <div style={{ width: 34, height: 34, borderRadius: 11, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, marginTop: 2, background: msg.role === 'user' ? '#e8eeff' : 'linear-gradient(135deg, #7b9cff, #f07bc4)' }}>
-              {msg.role === 'user' ? '👤' : '🌸'}
-            </div>
-            <div style={{ maxWidth: '74%', padding: '14px 18px', fontSize: 15, lineHeight: 1.75, borderRadius: 18, borderBottomLeftRadius: msg.role === 'assistant' ? 4 : 18, borderBottomRightRadius: msg.role === 'user' ? 4 : 18, whiteSpace: 'pre-wrap', background: msg.role === 'user' ? 'linear-gradient(135deg, #4f74f9, #3a5ee8)' : 'white', color: msg.role === 'user' ? 'white' : '#1a1f3c', border: msg.role === 'user' ? 'none' : '1px solid #e2e8ff', boxShadow: '0 2px 8px rgba(79,116,249,0.07)' }}>
-              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 0.5, marginBottom: 6, color: msg.role === 'user' ? 'rgba(255,255,255,0.7)' : '#4f74f9' }}>
-                {msg.role === 'user' ? 'YOU' : 'MAITRI'}
-              </div>
-              {msg.content}
-              <div style={{ fontSize: 11, color: msg.role === 'user' ? 'rgba(255,255,255,0.5)' : '#9aa0c0', marginTop: 8 }}>{toIST(msg.created_at)}</div>
-            </div>
+          <div className="flex flex-col">
+            <span className="text-[10px] font-black uppercase tracking-widest text-text-dim">Session Insight</span>
+            <span className="text-xs font-bold text-text-muted">{toIST(selected.started_at)}</span>
           </div>
-        ))}
-      </div>
-    </div>
-  )
+        </div>
 
-  // ── Session List View ──────────────────────────────────────────────────────
-  return (
-    <div style={{ minHeight: '100vh', background: '#f0f4ff', fontFamily: "'DM Sans', sans-serif" }}>
-      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 90, background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(16px)', borderBottom: '1px solid #e2e8ff', padding: '14px 28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 22, color: '#1a1f3c', letterSpacing: -0.3 }}>Your Sessions</div>
-        <button onClick={() => router.push('/consultation')} style={{ padding: '10px 20px', background: 'linear-gradient(135deg, #4f74f9, #3a5ee8)', color: 'white', border: 'none', borderRadius: 12, fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 500, cursor: 'pointer', boxShadow: '0 4px 14px rgba(79,116,249,0.3)' }}>
-          + New Session
-        </button>
-      </div>
+        {selected.is_crisis_flagged && (
+          <div className="px-3 py-1 rounded-full bg-secondary/10 border border-secondary/20 text-secondary text-[10px] font-black uppercase tracking-wider h-7 flex items-center">
+            Emergency Support
+          </div>
+        )}
+      </nav>
 
-      <div style={{ maxWidth: 700, margin: '0 auto', padding: '100px 24px 60px' }}>
-        {!loading && <div style={{ fontSize: 12, color: '#9aa0c0', marginBottom: 20, fontWeight: 500 }}>{sessions.length} session{sessions.length !== 1 ? 's' : ''} · Click to view transcript · Times in IST</div>}
-        {loading && <div style={{ color: '#9aa0c0', fontSize: 13, textAlign: 'center', marginTop: 60 }}>Loading...</div>}
-
-        {!loading && sessions.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '80px 20px' }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>🌸</div>
-            <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, color: '#1a1f3c', marginBottom: 8 }}>No sessions yet</div>
-            <div style={{ fontSize: 14, color: '#9aa0c0' }}>Start your first conversation with Maitri</div>
+      <main className="flex-1 w-full max-w-3xl mx-auto px-6 pt-28 pb-16 space-y-8 overflow-y-auto scrollbar-hide">
+        {loadingTranscript && (
+          <div className="flex flex-col items-center justify-center gap-4 py-20">
+            <svg className="animate-spin h-5 w-5 text-white/50" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>
+            <p className="text-xs text-text-dim font-bold uppercase tracking-widest">Loading history…</p>
           </div>
         )}
 
-        {sessions.map(s => (
-          <div key={s.session_id} onClick={() => openSession(s)}
-            style={{ background: s.is_crisis_flagged ? 'linear-gradient(135deg, #fff, #fff8fd)' : 'white', border: `1px solid ${s.is_crisis_flagged ? '#f9c5e8' : '#e2e8ff'}`, borderRadius: 16, padding: '18px 22px', marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 2px 8px rgba(79,116,249,0.05)' }}
-            onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 20px rgba(79,116,249,0.13)'; e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.borderColor = s.is_crisis_flagged ? '#f07bc4' : '#7b9cff' }}
-            onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(79,116,249,0.05)'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = s.is_crisis_flagged ? '#f9c5e8' : '#e2e8ff' }}
+        {!loadingTranscript && transcript?.messages?.length === 0 && (
+          <p className="text-center text-text-dim text-sm py-20">This session has no recorded messages.</p>
+        )}
+
+        {transcript?.messages?.map((m: any, i: number) => (
+          <div 
+            key={i} 
+            className={`flex gap-4 animate-msg-in ${m.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <div style={{ width: 44, height: 44, borderRadius: 13, background: s.is_crisis_flagged ? '#fde8f5' : '#e8eeff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
-                {s.is_crisis_flagged ? '🌸' : '💬'}
-              </div>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 500, color: '#1a1f3c', marginBottom: 5 }}>{toIST(s.started_at)}</div>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <span style={{ padding: '2px 8px', borderRadius: 100, fontSize: 10, fontWeight: 600, letterSpacing: 0.5, textTransform: 'uppercase', background: s.is_crisis_flagged ? '#fde8f5' : '#e8eeff', color: s.is_crisis_flagged ? '#e855a8' : '#4f74f9' }}>
-                    {s.is_crisis_flagged ? 'Crisis' : s.channel}
-                  </span>
-                  <span style={{ fontSize: 12, color: '#9aa0c0' }}>{s.is_crisis_flagged ? 'Support provided · Helpline shown' : 'Completed'}</span>
-                </div>
+            <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 mt-1 shadow-sm text-sm ${
+              m.role === 'user' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-linear-to-br from-primary to-secondary text-white'
+            }`}>
+              {m.role === 'assistant' ? '🌸' : '👤'}
+            </div>
+
+            <div className={`flex flex-col gap-1 ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
+              <div className={`px-5 py-4 text-sm leading-relaxed max-w-[85%] sm:max-w-md shadow-lg ${
+                m.role === 'user' 
+                  ? 'bg-primary text-white rounded-2xl rounded-tr-sm' 
+                  : 'bg-surface-dark/60 backdrop-blur-md border border-white/10 text-text-bright rounded-2xl rounded-tl-sm'
+              }`}>
+                {m.role === 'assistant' && (
+                  <div className="text-[10px] font-black tracking-widest uppercase mb-1 text-primary">Maitri AI</div>
+                )}
+                <p className="whitespace-pre-wrap">{m.content}</p>
+                <p className={`text-[10px] mt-3 font-bold opacity-40 ${m.role === 'user' ? 'text-white' : 'text-text-dim'}`}>
+                  {toIST(m.created_at)}
+                </p>
               </div>
             </div>
-            <div style={{ fontSize: 22, color: s.is_crisis_flagged ? '#f07bc4' : '#7b9cff', flexShrink: 0 }}>›</div>
           </div>
         ))}
-      </div>
+      </main>
+    </div>
+  )
+
+  // ── Session List ──────────────────────────────────────────────────────────
+  return (
+    <div className="min-h-screen bg-bg-dark flex flex-col">
+      <nav className="fixed top-0 left-0 right-0 h-18 z-50 glass border-b border-white/5 px-6 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center text-xl bg-surface-dark border border-white/10">🌸</div>
+          <h1 className="text-xl font-bold tracking-tight gradient-text">Your History</h1>
+        </div>
+
+        <button 
+          onClick={() => router.push('/consultation')}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-linear-to-r from-primary to-primary-600 text-white shadow-lg shadow-primary/20 hover:scale-[1.03] transition-all font-bold text-xs uppercase tracking-tight outline-none"
+        >
+          <NewIcon /> New Voice Session
+        </button>
+      </nav>
+
+      <main className="flex-1 w-full max-w-2xl mx-auto px-6 pt-28 pb-12">
+        {loading ? (
+          <div className="flex flex-col items-center justify-center gap-4 py-20">
+            <svg className="animate-spin h-5 w-5 text-white/50" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>
+            <p className="text-xs text-text-dim font-bold uppercase tracking-widest">Retrieving sessions…</p>
+          </div>
+        ) : sessions.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 space-y-6 animate-fade-up">
+            <div className="w-20 h-20 bg-surface-dark/50 border border-white/5 rounded-3xl flex items-center justify-center text-4xl shadow-2xl">🌸</div>
+            <div className="text-center">
+              <h2 className="text-xl font-bold text-text-bright">No whispers yet</h2>
+              <p className="text-sm text-text-dim mt-2">Start your journey with Maitri to see your progress here.</p>
+            </div>
+            <button 
+              onClick={() => router.push('/consultation')}
+              className="px-6 py-3 bg-linear-to-r from-primary to-secondary text-white font-bold rounded-2xl shadow-xl shadow-primary/20 hover:scale-105 transition-all outline-none"
+            >
+              Begin Session →
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <header className="flex items-center justify-between px-2 mb-6">
+              <span className="text-[11px] font-black uppercase tracking-[0.2em] text-text-dim opacity-60">Memory Bank · {sessions.length} sessions</span>
+            </header>
+
+            {sessions.map(s => (
+              <div
+                key={s.session_id}
+                onClick={() => openSession(s)}
+                className="group flex items-center justify-between p-5 bg-surface-dark/40 border border-white/5 rounded-3xl hover:bg-surface-hover/60 hover:border-primary/20 hover:-translate-y-1 transition-all duration-300 cursor-pointer shadow-sm hover:shadow-2xl hover:shadow-primary/5 active:scale-[0.98]"
+              >
+                <div className="flex items-center gap-5">
+                  <SessionIcon crisis={s.is_crisis_flagged} />
+                  <div className="space-y-1.5">
+                    <p className="text-sm font-bold text-text-bright group-hover:text-primary transition-colors">{toIST(s.started_at)}</p>
+                    <div className="flex items-center gap-2">
+                       <span className={`text-[10px] uppercase font-black tracking-widest px-2 py-0.5 rounded-md ${
+                         s.is_crisis_flagged ? 'bg-secondary/10 text-secondary' : 'bg-primary/10 text-primary'
+                       }`}>
+                         {s.is_crisis_flagged ? 'Crisis Protocol' : s.channel || 'Voice'}
+                       </span>
+                       <span className="text-[11px] text-text-dim font-medium tracking-tight">
+                         {s.is_crisis_flagged ? 'Emergency Support Provided' : 'Session Completed'}
+                       </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="text-text-dim group-hover:text-primary group-hover:translate-x-1 transition-all">
+                  <ChevronRight />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </main>
     </div>
   )
 }

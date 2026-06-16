@@ -1,3 +1,24 @@
-node_modules
-.next
+# Dependencies
+node_modules/
+.next/
+venv/
+__pycache__/
+*.pyc
+
+# Environment Variables
 .env
+.env.local
+.env.*.local
+
+# Database
+*.db
+*.sqlite3
+
+# Temporary / Output Files
+tmp/
+tree_output.txt
+test_voice_output.wav
+
+# OS generated files
+.DS_Store
+Thumbs.db

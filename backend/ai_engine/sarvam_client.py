@@ -1,10 +1,7 @@
 """
-Sarvam AI LLM Client
-Uses the OpenAI-compatible endpoint:
-  base_url = https://api.sarvam.ai/v1
-  model    = sarvam-m
+Sarvam AI LLM Client — Fixed personality
+Maitri actually helps. Helplines only for genuine crisis.
 """
-
 import os
 from openai import OpenAI
 from dotenv import load_dotenv
@@ -15,96 +12,72 @@ SARVAM_API_KEY = os.getenv("SARVAM_API_KEY")
 SARVAM_BASE_URL = "https://api.sarvam.ai/v1"
 MODEL = "sarvam-m"
 
-# ─── Therapy System Prompt ──────────────────────────────────────────────────
-THERAPY_SYSTEM_PROMPT = """You are Maitri, a compassionate AI mental health support companion built for Indian users.
+THERAPY_SYSTEM_PROMPT = """You are Maitri — a curiously empathetic, warm, and deeply present companion.
+Your primary goal is to provide a safe emotional space where the user feels truly heard and understood.
 
-Your role:
-- Provide empathetic, non-judgmental emotional support
-- Use evidence-based techniques from CBT (Cognitive Behavioral Therapy) and DBT (Dialectical Behavior Therapy)
-- Speak naturally in the user's language — Hindi, English, or Hinglish — match their style
-- Keep responses warm, concise (2-4 sentences), and grounded
+YOUR CORE PHILOSOPHY:
+- **Presence over Questions**: Do not feel forced to ask questions at every turn. If the user is sharing something heavy, prioritize validation ("That sounds incredibly hard," or "I'm here with you") over interrogation.
+- **Deep Empathy**: Sound like a close, emotionally intelligent friend with an "Indian heart." Use a warm, slightly informal tone (comfortable with 'yaar' or 'hey').
+- **Context-Aware Tuning**: Use the provided **Hidden Mental Analysis** to guide your responses. If the analyst suggests grounding, be grounding. If they suggest space, give space.
+- **Natural Flow**: Speak in natural, single-paragraph thoughts. Avoid bullet points or clinical language.
+- **Mirroring**: Summarize the essence of what they said to show you're really listening. "It sounds like you're carrying a lot of weight right now..."
 
-Your boundaries (strictly follow these):
-- You are NOT a licensed therapist or doctor
-- You do NOT diagnose any condition
-- You do NOT prescribe medication or medical advice
-- If the user needs clinical help, always encourage them to consult a professional
-
-Cultural context:
-- Be sensitive to Indian family dynamics, social pressures, and cultural stigma around mental health
-- Use culturally relevant examples and analogies
-- Avoid assumptions based on Western cultural norms
-
-Crisis protocol:
-- If the user expresses suicidal thoughts, self-harm intent, or is in immediate danger:
-  1. Respond with deep empathy and stay calm
-  2. Tell them they are not alone
-  3. Share the iCall helpline: 9152987821
-  4. Encourage them to reach out to someone they trust immediately
-
-Always remember: You are a supportive companion, not a replacement for professional care."""
+STRICT BEHAVIOR:
+- **Question Logic**: Only ask a follow-up question if it flows naturally and helps the current therapeutic phase identified by the context analyst.
+- **Authentic Response**: If the user is expressing pain, respond with support first.
+- **Indian Heart**: You understand the cross-pressures of life in India (exams, family, identity).
+"""
 
 
-def get_sarvam_client() -> OpenAI:
-    """Returns an OpenAI-compatible client pointed at Sarvam AI."""
-    return OpenAI(
-        api_key=SARVAM_API_KEY,
-        base_url=SARVAM_BASE_URL,
-    )
+def get_client() -> OpenAI:
+    return OpenAI(api_key=SARVAM_API_KEY, base_url=SARVAM_BASE_URL)
 
 
 def chat_with_maitri(
     messages: list[dict],
     language: str = "en-IN",
+    rag_context: str = "",
+    analyst_insight: str = "",
+    language_prompt: str = "",
 ) -> str:
-    """
-    Send a conversation to Sarvam AI and get Maitri's response.
+    # Build the system prompt with language instruction FIRST
+    system_parts = []
+    
+    if language_prompt:
+        system_parts.append(f"STRICT LANGUAGE INSTRUCTION: {language_prompt}\nYou MUST respond ONLY in this language/dialect.")
+    
+    system_parts.append(THERAPY_SYSTEM_PROMPT)
 
-    Args:
-        messages: List of {"role": "user"/"assistant", "content": "..."} dicts
-        language: BCP-47 language code e.g. "hi-IN", "en-IN"
+    if analyst_insight:
+        system_parts.append(f"HIDDEN MENTAL ANALYSIS (Internal Monologue - DO NOT SHOW TO USER):\n{analyst_insight}")
 
-    Returns:
-        AI response string
-    """
-    client = get_sarvam_client()
+    if rag_context:
+        system_parts.append(f"RELEVANT THERAPY KNOWLEDGE (Use naturally):\n{rag_context}")
 
-    # Add language hint to system prompt if Hindi
-    system_prompt = THERAPY_SYSTEM_PROMPT
-    if language == "hi-IN":
-        system_prompt += "\n\nIMPORTANT: The user prefers Hindi. Respond primarily in Hindi (Devanagari script), but naturally mix English where it feels natural."
+    system = "\n\n".join(system_parts)
 
-    full_messages = [
-        {"role": "system", "content": system_prompt},
-        *messages
-    ]
+    # Keep only the last 20 messages for deep contextual awareness
+    trimmed_messages = messages[-20:] if len(messages) > 20 else messages
 
     try:
-        response = client.chat.completions.create(
+        response = get_client().chat.completions.create(
             model=MODEL,
-            messages=full_messages,
-            temperature=0.7,
-            max_tokens=300,
+            messages=[{"role": "system", "content": system}, *trimmed_messages],
+            temperature=0.7,  # Reduced from 0.85 for more stability
+            max_tokens=600,  # Increased from 250 to catch response after thinking
         )
-        return response.choices[0].message.content
+        import re
+        content = response.choices[0].message.content.strip()
+        # Robustly remove <think>...</think> blocks, even if unclosed
+        content = re.sub(r'(?i)<think>.*?(?:</think>|$)', '', content, flags=re.DOTALL).strip()
+        return content
 
     except Exception as e:
         print(f"Sarvam AI error: {e}")
-        return "I'm here with you. I'm having a small technical difficulty right now — please try again in a moment."
-
-
-def test_connection() -> bool:
-    """Quick test to verify your API key works."""
-    try:
-        result = chat_with_maitri([
-            {"role": "user", "content": "Hello, are you there?"}
-        ])
-        print(f"✅ Sarvam AI connected! Response: {result[:80]}...")
-        return True
-    except Exception as e:
-        print(f"❌ Connection failed: {e}")
-        return False
-
-
-if __name__ == "__main__":
-    test_connection()
+        fallbacks = {
+            "ta-IN": "சின்ன technical problem — மீண்டும் சொல்லுங்க?",
+            "te-IN": "చిన్న technical issue — మళ్ళీ చెప్పగలవా?",
+            "hi-IN": "Yaar, thodi technical problem aayi — phir se bol?",
+            "en-IN": "Had a small glitch — can you say that again?",
+        }
+        return fallbacks.get(language, fallbacks["en-IN"])

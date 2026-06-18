@@ -30,15 +30,24 @@ async def streaming_stt(websocket: WebSocket, session_id: str):
         print(f"[WS] Handshake failed for {session_id}: {e}")
         return
     
-    # Sarvam Streaming URL — Using Saarika v2.5 for reliable STT
-    sarvam_url = "wss://api.sarvam.ai/speech-to-text/ws"
     headers = {"api-subscription-key": SARVAM_API_KEY}
     
     try:
-        # Use additional_headers for better compatibility with newer websockets/asyncio
-        async with websockets.connect(sarvam_url, additional_headers=headers) as sarvam_ws:
+        # Wait for the config message from the browser first
+        data = await websocket.receive_text()
+        msg = json.loads(data)
+        if msg["type"] != "config":
+            raise ValueError("Expected config message first")
+            
+        lang = msg.get("language", "en-IN")
+        
+        # Connect to Sarvam using URL query parameters for configuration
+        sarvam_url = f"wss://api.sarvam.ai/speech-to-text/ws?language-code={lang}&model=saaras:v3"
+        
+        # Use extra_headers for passing headers in websockets.connect
+        async with websockets.connect(sarvam_url, extra_headers=headers) as sarvam_ws:
             # ── Session State ──
-            config_sent = False
+            config_sent = True  # Config is already established via URL
             last_transcript = "" 
             
             # Lookup user from session for handle_voice_turn
@@ -83,20 +92,7 @@ async def streaming_stt(websocket: WebSocket, session_id: str):
                         data = await websocket.receive_text()
                         msg = json.loads(data)
                         
-                        if msg["type"] == "config":
-                            lang = msg.get("language", "en-IN")
-                            config = {
-                                "config": {
-                                    "language_code": lang,
-                                    "model": "saarika:v2.5",
-                                    "with_timestamps": False
-                                }
-                            }
-                            await sarvam_ws.send(json.dumps(config))
-                            config_sent = True
-                            print(f"[WS] Sent config to Sarvam: {lang}")
-                        
-                        elif msg["type"] == "audio":
+                        if msg["type"] == "audio":
                             if not config_sent: continue
                             await sarvam_ws.send(json.dumps({"audio": msg["data"]}))
                             

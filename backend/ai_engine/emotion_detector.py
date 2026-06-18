@@ -94,7 +94,7 @@ async def detect_emotion(text: str) -> EmotionResult:
             headers = {"Authorization": f"Bearer {HF_TOKEN}"}
             payload = {"inputs": text, "options": {"wait_for_model": True}}
             
-            response = await client.post(url, headers=headers, json=payload, timeout=5.0)
+            response = await client.post(url, headers=headers, json=payload, timeout=1.8)
             
             if response.status_code == 200:
                 results = response.json()

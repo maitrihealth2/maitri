@@ -6,7 +6,6 @@ from ChromaDB and returns them as context for the LLM.
 
 import os
 import chromadb
-from chromadb.utils import embedding_functions
 
 CHROMA_DIR = os.path.join(os.path.dirname(__file__), "..", "knowledge", "chroma_db")
 COLLECTION_NAME = "therapy_knowledge"
@@ -20,6 +19,7 @@ def get_collection():
     global _client, _collection
     if _collection is None:
         _client = chromadb.PersistentClient(path=CHROMA_DIR)
+        from chromadb.utils import embedding_functions
         embedding_fn = embedding_functions.SentenceTransformerEmbeddingFunction(
             model_name="all-MiniLM-L6-v2"
         )
@@ -59,9 +59,9 @@ def retrieve_context(query: str, n_results: int = 3) -> str:
 
 
 def is_knowledge_base_ready() -> bool:
-    """Check if ChromaDB has been populated."""
+    """Check if ChromaDB has been populated by inspecting the database file, without loading SentenceTransformer."""
     try:
-        collection = get_collection()
-        return collection.count() > 0
+        sqlite_file = os.path.join(CHROMA_DIR, "chroma.sqlite3")
+        return os.path.exists(sqlite_file) and os.path.getsize(sqlite_file) > 1024
     except Exception:
         return False

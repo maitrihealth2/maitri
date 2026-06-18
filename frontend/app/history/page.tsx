@@ -3,39 +3,6 @@ import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { getHistory, getTranscript } from '../../lib/api'
 
-/**
- * modernised History Page — Next.js 15 + Tailwind 4
- * consistent with Consultation and Login aesthetics
- * premium glass session cards
- */
-
-// ── Icons ─────────────────────────────────────────────────────────────────────
-const BackIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-    <path d="m15 18-6-6 6-6" />
-  </svg>
-)
-
-const NewIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-    <path d="M5 12h14m-7-7v14" />
-  </svg>
-)
-
-const ChevronRight = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-    <path d="m9 18 6-6-6-6" />
-  </svg>
-)
-
-const SessionIcon = ({ crisis }: { crisis?: boolean }) => (
-  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl transition-all ${
-    crisis ? 'bg-secondary/10 border border-secondary/20 text-secondary shadow-lg shadow-secondary/5' : 'bg-primary/10 border border-primary/20 text-primary shadow-lg shadow-primary/5'
-  }`}>
-    {crisis ? '🌸' : '💬'}
-  </div>
-)
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const toIST = (d: string) => {
   try {
@@ -88,146 +55,142 @@ export default function HistoryPage() {
     }
   }
 
-  // ── Transcript View ───────────────────────────────────────────────────────
-  if (selected) return (
-    <div className="min-h-screen bg-bg-dark flex flex-col">
-      <nav className="fixed top-0 left-0 right-0 h-18 z-50 glass border-b border-white/5 px-6 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => { setSelected(null); setTranscript(null) }}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface-dark/50 border border-white/5 text-text-muted hover:text-text-bright hover:bg-surface-dark transition-all outline-none text-xs font-bold"
-          >
-            <BackIcon /> Back
-          </button>
-          <div className="flex flex-col">
-            <span className="text-[10px] font-black uppercase tracking-widest text-text-dim">Session Insight</span>
-            <span className="text-xs font-bold text-text-muted">{toIST(selected.started_at)}</span>
-          </div>
-        </div>
-
-        {selected.is_crisis_flagged && (
-          <div className="px-3 py-1 rounded-full bg-secondary/10 border border-secondary/20 text-secondary text-[10px] font-black uppercase tracking-wider h-7 flex items-center">
-            Emergency Support
-          </div>
-        )}
-      </nav>
-
-      <main className="flex-1 w-full max-w-3xl mx-auto px-6 pt-28 pb-16 space-y-8 overflow-y-auto scrollbar-hide">
-        {loadingTranscript && (
-          <div className="flex flex-col items-center justify-center gap-4 py-20">
-            <svg className="animate-spin h-5 w-5 text-white/50" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>
-            <p className="text-xs text-text-dim font-bold uppercase tracking-widest">Loading history…</p>
-          </div>
-        )}
-
-        {!loadingTranscript && transcript?.messages?.length === 0 && (
-          <p className="text-center text-text-dim text-sm py-20">This session has no recorded messages.</p>
-        )}
-
-        {transcript?.messages?.map((m: any, i: number) => (
-          <div 
-            key={i} 
-            className={`flex gap-4 animate-msg-in ${m.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
-          >
-            <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 mt-1 shadow-sm text-sm ${
-              m.role === 'user' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-linear-to-br from-primary to-secondary text-white'
-            }`}>
-              {m.role === 'assistant' ? '🌸' : '👤'}
-            </div>
-
-            <div className={`flex flex-col gap-1 ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
-              <div className={`px-5 py-4 text-sm leading-relaxed max-w-[85%] sm:max-w-md shadow-lg ${
-                m.role === 'user' 
-                  ? 'bg-primary text-white rounded-2xl rounded-tr-sm' 
-                  : 'bg-surface-dark/60 backdrop-blur-md border border-white/10 text-text-bright rounded-2xl rounded-tl-sm'
-              }`}>
-                {m.role === 'assistant' && (
-                  <div className="text-[10px] font-black tracking-widest uppercase mb-1 text-primary">Maitri AI</div>
-                )}
-                <p className="whitespace-pre-wrap">{m.content}</p>
-                <p className={`text-[10px] mt-3 font-bold opacity-40 ${m.role === 'user' ? 'text-white' : 'text-text-dim'}`}>
-                  {toIST(m.created_at)}
-                </p>
-              </div>
-            </div>
-          </div>
-        ))}
-      </main>
-    </div>
-  )
-
-  // ── Session List ──────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-bg-dark flex flex-col">
-      <nav className="fixed top-0 left-0 right-0 h-18 z-50 glass border-b border-white/5 px-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center text-xl bg-surface-dark border border-white/10">🌸</div>
-          <h1 className="text-xl font-bold tracking-tight gradient-text">Your History</h1>
+    <div className="bg-background text-on-background font-body-md h-screen flex flex-col overflow-hidden selection:bg-secondary/30 selection:text-secondary-fixed">
+      {/* Top Navbar */}
+      <header className="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-gutter py-4 bg-surface/80 backdrop-blur-xl shadow-none border-b border-outline-variant/20">
+        <div className="flex items-center gap-2 cursor-pointer hover:bg-surface-container-highest transition-colors duration-200 p-2 rounded-lg" onClick={() => router.push('/consultation')}>
+          <span className="font-headline-lg text-headline-lg font-bold tracking-tight text-primary dark:text-primary-fixed-dim">Maitri</span>
         </div>
+        <div className="flex items-center gap-4">
+          <button onClick={() => router.push('/consultation')} className="px-4 py-2 bg-secondary hover:bg-secondary-container text-on-secondary-container font-label-md text-label-md rounded-full shadow-[0_0_15px_rgba(76,215,246,0.2)] transition-all active:scale-95 flex items-center gap-2">
+            <span className="material-symbols-outlined text-[18px]">add</span>
+            <span className="hidden sm:inline">New Session</span>
+          </button>
+        </div>
+      </header>
 
-        <button 
-          onClick={() => router.push('/consultation')}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-linear-to-r from-primary to-primary-600 text-white shadow-lg shadow-primary/20 hover:scale-[1.03] transition-all font-bold text-xs uppercase tracking-tight outline-none"
-        >
-          <NewIcon /> New Voice Session
-        </button>
-      </nav>
-
-      <main className="flex-1 w-full max-w-2xl mx-auto px-6 pt-28 pb-12">
-        {loading ? (
-          <div className="flex flex-col items-center justify-center gap-4 py-20">
-            <svg className="animate-spin h-5 w-5 text-white/50" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>
-            <p className="text-xs text-text-dim font-bold uppercase tracking-widest">Retrieving sessions…</p>
+      {/* Main Container */}
+      <main className="flex h-screen pt-[72px]">
+        {/* Left Pane (Sidebar List) */}
+        <aside className={`w-full lg:w-[380px] flex-shrink-0 border-r border-outline-variant/20 bg-surface-dim flex flex-col transition-all duration-300 relative z-10 ${selected ? 'hidden lg:flex' : 'flex'}`}>
+          <div className="p-gutter border-b border-outline-variant/10">
+            <h2 className="font-headline-md text-headline-md text-on-surface">Journey History</h2>
           </div>
-        ) : sessions.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 space-y-6 animate-fade-up">
-            <div className="w-20 h-20 bg-surface-dark/50 border border-white/5 rounded-3xl flex items-center justify-center text-4xl shadow-2xl">🌸</div>
-            <div className="text-center">
-              <h2 className="text-xl font-bold text-text-bright">No whispers yet</h2>
-              <p className="text-sm text-text-dim mt-2">Start your journey with Maitri to see your progress here.</p>
-            </div>
-            <button 
-              onClick={() => router.push('/consultation')}
-              className="px-6 py-3 bg-linear-to-r from-primary to-secondary text-white font-bold rounded-2xl shadow-xl shadow-primary/20 hover:scale-105 transition-all outline-none"
-            >
-              Begin Session →
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <header className="flex items-center justify-between px-2 mb-6">
-              <span className="text-[11px] font-black uppercase tracking-[0.2em] text-text-dim opacity-60">Memory Bank · {sessions.length} sessions</span>
-            </header>
-
-            {sessions.map(s => (
-              <div
-                key={s.session_id}
-                onClick={() => openSession(s)}
-                className="group flex items-center justify-between p-5 bg-surface-dark/40 border border-white/5 rounded-3xl hover:bg-surface-hover/60 hover:border-primary/20 hover:-translate-y-1 transition-all duration-300 cursor-pointer shadow-sm hover:shadow-2xl hover:shadow-primary/5 active:scale-[0.98]"
-              >
-                <div className="flex items-center gap-5">
-                  <SessionIcon crisis={s.is_crisis_flagged} />
-                  <div className="space-y-1.5">
-                    <p className="text-sm font-bold text-text-bright group-hover:text-primary transition-colors">{toIST(s.started_at)}</p>
-                    <div className="flex items-center gap-2">
-                       <span className={`text-[10px] uppercase font-black tracking-widest px-2 py-0.5 rounded-md ${
-                         s.is_crisis_flagged ? 'bg-secondary/10 text-secondary' : 'bg-primary/10 text-primary'
-                       }`}>
-                         {s.is_crisis_flagged ? 'Crisis Protocol' : s.channel || 'Voice'}
-                       </span>
-                       <span className="text-[11px] text-text-dim font-medium tracking-tight">
-                         {s.is_crisis_flagged ? 'Emergency Support Provided' : 'Session Completed'}
-                       </span>
-                    </div>
-                  </div>
-                </div>
-                <div className="text-text-dim group-hover:text-primary group-hover:translate-x-1 transition-all">
-                  <ChevronRight />
-                </div>
+          
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2">
+            {loading ? (
+              <div className="flex flex-col items-center justify-center py-10 opacity-50">
+                <span className="material-symbols-outlined animate-spin text-3xl text-primary">progress_activity</span>
+                <p className="mt-2 text-sm text-on-surface-variant">Loading records...</p>
               </div>
-            ))}
+            ) : sessions.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 opacity-50 text-center px-4">
+                <span className="material-symbols-outlined text-4xl mb-2 text-on-surface-variant">history_toggle_off</span>
+                <p className="text-on-surface-variant text-sm">No history found.<br/>Start a session to see it here.</p>
+              </div>
+            ) : (
+              sessions.map((s) => (
+                <div 
+                  key={s.session_id}
+                  onClick={() => openSession(s)}
+                  className={`p-4 rounded-2xl cursor-pointer transition-all duration-200 border group ${
+                    selected?.session_id === s.session_id 
+                      ? 'bg-surface-container-high border-secondary/30 shadow-[0_0_10px_rgba(76,215,246,0.1)]' 
+                      : 'bg-surface-container border-transparent hover:bg-surface-container-high hover:border-outline-variant/30'
+                  }`}
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[16px] ${
+                        s.is_crisis_flagged ? 'bg-error/20 text-error' : 'bg-primary/20 text-primary'
+                      }`}>
+                        <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
+                          {s.is_crisis_flagged ? 'emergency' : 'forum'}
+                        </span>
+                      </div>
+                      <span className="font-label-md text-label-md text-on-surface">
+                        {toIST(s.started_at).split(' ')[0]} {toIST(s.started_at).split(' ')[1]}
+                      </span>
+                    </div>
+                    <span className="text-xs text-on-surface-variant opacity-60">
+                      {toIST(s.started_at).split(' ').slice(2).join(' ')}
+                    </span>
+                  </div>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant line-clamp-2 pl-10">
+                    {s.is_crisis_flagged ? 'Crisis Protocol Activated' : 'Consultation Session'}
+                  </p>
+                </div>
+              ))
+            )}
           </div>
-        )}
+        </aside>
+
+        {/* Right Pane (Transcript) */}
+        <section className={`flex-1 bg-surface-container-lowest flex flex-col relative z-0 ${!selected ? 'hidden lg:flex' : 'flex'}`}>
+          {!selected ? (
+            <div className="flex-1 flex flex-col items-center justify-center opacity-40">
+              <span className="material-symbols-outlined text-6xl mb-4 text-primary">search_insights</span>
+              <p className="font-body-lg text-body-lg">Select a session to view the transcript</p>
+            </div>
+          ) : (
+            <>
+              {/* Transcript Header */}
+              <div className="p-gutter border-b border-outline-variant/10 bg-surface/50 backdrop-blur-md flex items-center gap-4 shrink-0">
+                <button 
+                  className="lg:hidden w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container transition-colors"
+                  onClick={() => setSelected(null)}
+                >
+                  <span className="material-symbols-outlined">arrow_back</span>
+                </button>
+                <div>
+                  <h3 className="font-headline-sm text-headline-sm text-on-surface">Session Details</h3>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant">{toIST(selected.started_at)}</p>
+                </div>
+                {selected.is_crisis_flagged && (
+                  <div className="ml-auto px-3 py-1 bg-error/10 text-error rounded-full text-xs font-bold border border-error/20 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[14px]">warning</span>
+                    Emergency
+                  </div>
+                )}
+              </div>
+              
+              {/* Transcript Body */}
+              <div className="flex-1 overflow-y-auto p-gutter space-y-stack-md custom-scrollbar">
+                {loadingTranscript ? (
+                  <div className="flex flex-col items-center justify-center py-20 opacity-50">
+                    <span className="material-symbols-outlined animate-spin text-3xl text-primary">progress_activity</span>
+                    <p className="mt-2 text-sm text-on-surface-variant">Loading transcript...</p>
+                  </div>
+                ) : transcript?.messages?.length === 0 ? (
+                  <div className="text-center py-20 text-on-surface-variant">
+                    No conversation data for this session.
+                  </div>
+                ) : (
+                  transcript?.messages?.map((m: any, i: number) => (
+                    <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-up`} style={{ animationDelay: `${i * 0.05}s` }}>
+                      {m.role === 'assistant' && (
+                        <div className="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center shrink-0 mt-1 mr-3">
+                          <span className="material-symbols-outlined text-[16px] text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>eco</span>
+                        </div>
+                      )}
+                      <div className={`max-w-[85%] lg:max-w-[70%] p-5 rounded-2xl ${
+                        m.role === 'user'
+                          ? 'bg-surface-variant/50 border border-outline-variant/20 rounded-tr-sm text-on-surface'
+                          : 'bg-surface-container-low/80 backdrop-blur-md border border-primary/10 rounded-tl-sm text-on-surface shadow-sm'
+                      }`}>
+                        <p className="font-body-md text-body-md whitespace-pre-wrap">{m.content}</p>
+                        <div className={`text-[10px] mt-2 opacity-50 ${m.role === 'user' ? 'text-right' : 'text-left'}`}>
+                          {toIST(m.created_at)}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </>
+          )}
+        </section>
       </main>
     </div>
   )

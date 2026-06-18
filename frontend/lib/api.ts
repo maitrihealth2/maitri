@@ -48,3 +48,10 @@ export async function getTranscript(sessionId: string) {
   const res = await api.get(`/api/consultation/${sessionId}`)
   return res.data
 }
+
+export async function sendVoiceMessage(sessionId: string, formData: FormData) {
+  const res = await api.post('/api/voice/conversation', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+  return res.data
+}

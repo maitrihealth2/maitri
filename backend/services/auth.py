@@ -4,7 +4,8 @@ Auth utilities — uses bcrypt directly (no passlib) to avoid version conflicts
 import os
 import bcrypt
 from datetime import datetime, timedelta
-from jose import JWTError, jwt
+import jwt
+from jwt.exceptions import PyJWTError as JWTError
 from dotenv import load_dotenv
 
 load_dotenv()

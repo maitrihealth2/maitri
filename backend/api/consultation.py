@@ -1,9 +1,10 @@
 import uuid
+import asyncio
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
-from db.models import get_db, Session as DBSession, Message, RiskLog, User
+from db.models import get_db, Session as DBSession, Message, RiskLog, User, get_past_history_context
 from ai_engine.sarvam_client import chat_with_maitri
 from ai_engine.emotion_detector import detect_emotion
 from ai_engine.voice_client import get_language_prompt
@@ -14,11 +15,11 @@ try:
     from rag.retriever import retrieve_context, is_knowledge_base_ready
     RAG_AVAILABLE = is_knowledge_base_ready()
     if RAG_AVAILABLE:
-        print("✅ RAG knowledge base loaded")
+        print("[RAG] Knowledge base loaded")
     else:
-        print("⚠️  RAG not ready — run: python -m knowledge.loader")
+        print("[RAG] Not ready — run: python -m knowledge.loader")
 except Exception as e:
-    print(f"⚠️  RAG not available: {e}")
+    print(f"[RAG] Not available: {e}")
     RAG_AVAILABLE = False
     def retrieve_context(query, n_results=3): return ""
 
@@ -88,12 +89,10 @@ async def send_message(
                             emotion="Crisis", emotion_emoji="🚨",
                             emotion_score=1.0, rag_used=False)
 
-    # ── Emotion + RAG + language prompt ──────────────────────────────────────
-    emotion = await detect_emotion(req.message)
+    # ── Emotion + LLM concurrently ──────────────────────────────────────────
     rag_context = retrieve_context(req.message) if RAG_AVAILABLE else ""
     lang_prompt = get_language_prompt(req.language)
 
-    # ── History + LLM ─────────────────────────────────────────────────────────
     past = db.query(Message).filter(
         Message.session_id == session.id
     ).order_by(Message.created_at).all()
@@ -101,12 +100,22 @@ async def send_message(
     history = [{"role": m.role, "content": m.content} for m in past[-20:]]
     history.append({"role": "user", "content": req.message})
 
-    ai_response = chat_with_maitri(
+    # Fetch previous session context for cross-session recall
+    past_history = get_past_history_context(db, current_user.id, session.id)
+
+    # Start tasks concurrently
+    emotion_task = asyncio.create_task(detect_emotion(req.message))
+    llm_task = asyncio.to_thread(
+        chat_with_maitri,
         messages=history,
         language=req.language,
         rag_context=rag_context,
         language_prompt=lang_prompt,
+        past_history_context=past_history,
     )
+
+    ai_response = await llm_task
+    emotion = await emotion_task
 
     # ── Save ──────────────────────────────────────────────────────────────────
     db.add(Message(session_id=session.id, role="user", content=req.message,

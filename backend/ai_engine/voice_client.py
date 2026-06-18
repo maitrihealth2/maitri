@@ -54,6 +54,9 @@ LANGUAGE_PROMPTS = {
 def convert_to_wav(audio_bytes: bytes) -> bytes:
     """Convert browser audio to 16kHz mono WAV using ffmpeg."""
     import uuid
+    import imageio_ffmpeg
+    
+    ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
     # Use project-local tmp/ to avoid space issues in Windows User paths
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     tmp_dir = os.path.join(base_dir, "tmp")
@@ -75,7 +78,7 @@ def convert_to_wav(audio_bytes: bytes) -> bytes:
         # Explicit shell=False (default) with list is usually best, 
         # but ffmpeg on Windows can be picky about absolute paths.
         result = subprocess.run(
-            ["ffmpeg", "-y", "-i", input_path, "-ar", "16000", "-ac", "1", "-f", "wav", output_path],
+            [ffmpeg_exe, "-y", "-i", input_path, "-ar", "16000", "-ac", "1", "-f", "wav", output_path],
             capture_output=True, text=True,
         )
         

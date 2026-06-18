@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Maitri - Consultation</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,600;1,700;1,800&amp;family=Inter:wght@300;400;500;600;700&amp;family=Public+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary": "#686555",
+                        "tertiary-fixed-dim": "#e3e9bd",
+                        "tertiary-dim": "#555b39",
+                        "primary": "#6c5b4d",
+                        "outline-variant": "#bcbaa9",
+                        "primary-fixed": "#f5decd",
+                        "tertiary-container": "#f1f8cb",
+                        "tertiary": "#616844",
+                        "on-primary-fixed-variant": "#69594b",
+                        "surface-container": "#f7f4e7",
+                        "surface-container-low": "#fdf9ef",
+                        "primary-fixed-dim": "#e7d0bf",
+                        "on-surface": "#39382c",
+                        "primary-container": "#f5decd",
+                        "secondary-container": "#e8e2cf",
+                        "on-error": "#ffffff",
+                        "background": "#fffbff",
+                        "surface-variant": "#ece8d7",
+                        "inverse-primary": "#fbe4d2",
+                        "surface": "#fffbff",
+                        "on-tertiary": "#ffffff",
+                        "inverse-surface": "#0f0e0a",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary-fixed-variant": "#636946",
+                        "on-primary-container": "#5e4f41",
+                        "surface-dim": "#e6e3cf",
+                        "inverse-on-surface": "#9f9d96",
+                        "tertiary-fixed": "#f1f8cb",
+                        "secondary-dim": "#5c5849",
+                        "surface-container-high": "#f2eedf",
+                        "primary-dim": "#5f5042",
+                        "on-primary-fixed": "#4b3d30",
+                        "error-dim": "#5c1202",
+                        "surface-bright": "#fffbff",
+                        "on-secondary-fixed": "#424031",
+                        "secondary-fixed": "#e8e2cf",
+                        "on-secondary": "#ffffff",
+                        "surface-tint": "#6c5b4d",
+                        "on-primary": "#fff6f1",
+                        "surface-container-highest": "#ece8d7",
+                        "error-container": "#fe8b70",
+                        "on-secondary-container": "#555243",
+                        "on-error-container": "#742410",
+                        "on-tertiary-fixed": "#464d2c",
+                        "secondary-fixed-dim": "#dad4c1",
+                        "outline": "#838172",
+                        "on-background": "#39382c",
+                        "on-surface-variant": "#666557",
+                        "on-tertiary-container": "#595f3c",
+                        "on-secondary-fixed-variant": "#5f5c4c",
+                        "error": "#a54731"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["EB Garamond", "serif"],
+                        "display": ["EB Garamond", "serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "label": ["Public Sans", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .glass-panel {
+            background: rgba(253, 249, 239, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(188, 186, 169, 0.2);
+            box-shadow: 0 4px 24px -4px rgba(108, 91, 77, 0.05);
+        }
+        
+        .pulse-orb {
+            animation: pulse-ring 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 222, 205, 0.7); }
+            70% { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(245, 222, 205, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 222, 205, 0); }
+        }
+
+        /* Custom Scrollbar for chat area */
+        .chat-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .chat-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .chat-scroll::-webkit-scrollbar-thumb {
+            background-color: rgba(188, 186, 169, 0.3);
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="bg-surface-container-low text-on-surface font-body h-screen flex flex-col overflow-hidden relative selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopNavBar (Adapted for Consultation intent - Desktop) -->
+<header class="hidden md:flex justify-between items-center px-6 py-4 w-full max-w-7xl mx-auto bg-surface/80 backdrop-blur-xl shadow-sm fixed top-0 w-full z-40 transition-all duration-300">
+<div class="flex items-center gap-8">
+<h1 class="font-headline italic text-2xl text-primary cursor-pointer hover:opacity-80 transition-opacity">Maitri</h1>
+<nav class="flex gap-6">
+<!-- Highlight 'Consultation' conceptually, but using the provided generic labels to follow rules -->
+<a class="text-on-surface-variant hover:text-primary transition-colors hover:bg-secondary-container/50 duration-300 rounded-full px-4 py-2 font-label text-sm tracking-wide" href="#">Sanctuary</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors hover:bg-secondary-container/50 duration-300 rounded-full px-4 py-2 font-label text-sm tracking-wide" href="#">Wisdom</a>
+<!-- Active State for Pulse (Closest intent to real-time chat) -->
+<a class="text-primary font-bold border-b-2 border-primary pb-1 rounded-full px-4 py-2 font-label text-sm tracking-wide bg-primary-container/20" href="#">Pulse</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<!-- Language Toggle Pill -->
+<div class="flex items-center bg-surface-variant rounded-full p-1 border border-outline-variant/30 shadow-inner">
+<button class="px-3 py-1 rounded-full text-xs font-medium bg-surface text-on-surface shadow-sm transition-all">EN</button>
+<button class="px-3 py-1 rounded-full text-xs font-medium text-on-surface-variant hover:text-on-surface transition-all">HI</button>
+</div>
+<button class="p-2 rounded-full text-on-surface-variant hover:bg-secondary-container/50 transition-all duration-300 active:scale-95 group">
+<span class="material-symbols-outlined text-xl group-hover:text-primary transition-colors">history</span>
+</button>
+<button class="p-2 rounded-full text-on-surface-variant hover:bg-secondary-container/50 transition-all duration-300 active:scale-95 group">
+<span class="material-symbols-outlined text-xl group-hover:text-error transition-colors">logout</span>
+</button>
+</div>
+</header>
+<!-- SideNavBar (Adapted for Consultation intent - Desktop) -->
+<aside class="hidden md:flex flex-col p-4 gap-2 h-screen w-64 fixed left-0 top-0 border-r border-outline-variant/30 shadow-md bg-surface-container-low z-30 pt-24">
+<div class="mb-8 px-4 flex flex-col items-center text-center">
+<div class="w-16 h-16 rounded-full bg-primary-container flex items-center justify-center mb-3 shadow-inner">
+<span class="material-symbols-outlined text-3xl text-primary">spa</span>
+</div>
+<h2 class="font-headline text-xl text-primary mb-1">Maitri</h2>
+<p class="text-xs text-on-surface-variant font-label uppercase tracking-wider">Your Digital Sanctuary</p>
+</div>
+<nav class="flex-1 flex flex-col gap-2">
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-variant rounded-xl hover:translate-x-1 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined">book_2</span>
+<span class="font-body text-sm">Journal</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-variant rounded-xl hover:translate-x-1 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined">self_improvement</span>
+<span class="font-body text-sm">Meditation</span>
+</a>
+<!-- Active State -->
+<a class="flex items-center gap-3 px-4 py-3 bg-tertiary-container text-on-tertiary-container rounded-xl font-medium shadow-sm border border-tertiary-fixed-dim/50" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">spa</span>
+<span class="font-body text-sm">Consultation</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-variant rounded-xl hover:translate-x-1 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined">history</span>
+<span class="font-body text-sm">Archives</span>
+</a>
+</nav>
+<div class="mt-auto p-4">
+<button class="w-full py-3 px-4 bg-primary text-on-primary rounded-xl font-medium text-sm shadow-md hover:bg-primary-dim transition-colors active:scale-95 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm">add</span>
+                Start New Session
+            </button>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 md:ml-64 pt-20 md:pt-24 pb-40 flex flex-col relative w-full h-full">
+<!-- Canvas Background Layer -->
+<div class="absolute inset-0 z-0 opacity-40 pointer-events-none" style="background-image: radial-gradient(circle at 50% 50%, rgba(245, 222, 205, 0.1) 0%, transparent 60%);"></div>
+<!-- Chat Container -->
+<div class="flex-1 w-full max-w-4xl mx-auto px-4 md:px-8 overflow-y-auto chat-scroll flex flex-col gap-6 relative z-10 scroll-smooth" id="chat-container">
+<!-- System Greeting -->
+<div class="flex justify-center my-6">
+<span class="text-xs font-label uppercase tracking-widest text-on-surface-variant/60 bg-surface-variant/50 px-4 py-1 rounded-full backdrop-blur-sm">Today, 10:45 AM</span>
+</div>
+<!-- AI Message -->
+<div class="flex items-start gap-4 max-w-[85%]">
+<div class="w-10 h-10 rounded-full bg-tertiary-container flex items-center justify-center flex-shrink-0 shadow-sm border border-tertiary-fixed-dim/50 mt-1">
+<span class="material-symbols-outlined text-tertiary-dim text-lg">eco</span>
+</div>
+<div class="glass-panel p-5 rounded-2xl rounded-tl-sm relative group">
+<!-- Subtle Inner Glow -->
+<div class="absolute inset-0 rounded-2xl rounded-tl-sm bg-gradient-to-br from-white/40 to-transparent pointer-events-none"></div>
+<p class="text-on-surface leading-relaxed font-body text-sm relative z-10">Welcome to your sanctuary. I'm Maitri. How is your spirit feeling today?</p>
+</div>
+</div>
+<!-- User Message -->
+<div class="flex items-end justify-end gap-4 max-w-[85%] self-end mt-2">
+<div class="bg-primary-container text-on-primary-container p-5 rounded-2xl rounded-tr-sm shadow-sm relative group">
+<p class="leading-relaxed font-body text-sm">I've been feeling a bit overwhelmed lately. Work is stressful and I can't seem to wind down at night.</p>
+</div>
+</div>
+<!-- AI Message with Tags -->
+<div class="flex items-start gap-4 max-w-[85%] mt-2">
+<div class="w-10 h-10 rounded-full bg-tertiary-container flex items-center justify-center flex-shrink-0 shadow-sm border border-tertiary-fixed-dim/50 mt-1">
+<span class="material-symbols-outlined text-tertiary-dim text-lg">eco</span>
+</div>
+<div class="glass-panel p-5 rounded-2xl rounded-tl-sm relative flex flex-col gap-3">
+<div class="absolute inset-0 rounded-2xl rounded-tl-sm bg-gradient-to-br from-white/40 to-transparent pointer-events-none"></div>
+<p class="text-on-surface leading-relaxed font-body text-sm relative z-10">I hear you. Carrying the weight of the day into the night can be exhausting. It sounds like your mind is having trouble finding stillness.</p>
+<!-- Emotional State Tags -->
+<div class="flex flex-wrap gap-2 mt-2 relative z-10">
+<span class="inline-flex items-center gap-1 px-3 py-1 bg-error-container/20 text-error-dim text-xs font-medium rounded-full border border-error-container/30">
+<span class="material-symbols-outlined text-[14px]">psychology</span>
+                            Anxiety
+                        </span>
+<span class="inline-flex items-center gap-1 px-3 py-1 bg-secondary-container text-on-secondary-container text-xs font-medium rounded-full border border-outline-variant/30">
+<span class="material-symbols-outlined text-[14px]">bedtime</span>
+                            Restless
+                        </span>
+</div>
+</div>
+</div>
+<!-- Empty space for scrolling -->
+<div class="h-10"></div>
+</div>
+<!-- Input Dock (Fixed Bottom) -->
+<div class="fixed bottom-0 left-0 md:left-64 right-0 z-30 pt-10 pb-6 px-4 md:px-8 bg-gradient-to-t from-surface-container via-surface-container/90 to-transparent pointer-events-none">
+<div class="max-w-4xl mx-auto flex flex-col gap-4 pointer-events-auto">
+<!-- Quick Replies -->
+<div class="flex overflow-x-auto gap-3 pb-2 chat-scroll hide-scrollbar">
+<button class="flex-shrink-0 px-4 py-2 bg-surface border border-outline-variant/40 rounded-full text-sm font-medium text-on-surface-variant hover:bg-secondary-container/50 hover:text-on-surface hover:border-secondary transition-all shadow-sm active:scale-95">I'm feeling anxious</button>
+<button class="flex-shrink-0 px-4 py-2 bg-surface border border-outline-variant/40 rounded-full text-sm font-medium text-on-surface-variant hover:bg-secondary-container/50 hover:text-on-surface hover:border-secondary transition-all shadow-sm active:scale-95">I can't sleep</button>
+<button class="flex-shrink-0 px-4 py-2 bg-surface border border-outline-variant/40 rounded-full text-sm font-medium text-on-surface-variant hover:bg-secondary-container/50 hover:text-on-surface hover:border-secondary transition-all shadow-sm active:scale-95">Just need to talk</button>
+</div>
+<!-- Input Area -->
+<div class="flex items-end gap-3 relative">
+<!-- Text Input -->
+<div class="flex-1 glass-panel rounded-3xl p-2 pl-6 flex items-center gap-3 relative focus-within:ring-2 focus-within:ring-primary/30 transition-all duration-300">
+<textarea class="w-full bg-transparent border-none outline-none resize-none text-on-surface font-body text-sm py-3 max-h-32 placeholder:text-on-surface-variant/50 focus:ring-0" placeholder="Share your thoughts..." rows="1"></textarea>
+<button class="p-3 rounded-full bg-surface-variant text-on-surface-variant hover:text-primary hover:bg-primary-container/50 transition-colors flex-shrink-0 active:scale-90">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">send</span>
+</button>
+</div>
+<!-- Prominent Mic Button -->
+<button class="w-14 h-14 rounded-full bg-primary text-on-primary shadow-[0_8px_16px_rgba(108,91,77,0.25)] hover:shadow-[0_12px_24px_rgba(108,91,77,0.3)] hover:-translate-y-1 active:translate-y-0 active:scale-95 flex items-center justify-center transition-all duration-300 flex-shrink-0 group relative overflow-hidden" onclick="toggleVoiceOverlay()">
+<div class="absolute inset-0 bg-white/20 rounded-full scale-0 group-hover:scale-100 transition-transform duration-300 opacity-0 group-hover:opacity-100"></div>
+<span class="material-symbols-outlined text-2xl relative z-10" style="font-variation-settings: 'FILL' 1;">mic</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+<!-- Voice Interaction Overlay (Hidden by default) -->
+<div class="fixed inset-0 z-50 bg-surface/80 backdrop-blur-xl flex flex-col items-center justify-center opacity-0 pointer-events-none transition-opacity duration-500" id="voiceOverlay">
+<!-- Close Button -->
+<button class="absolute top-8 right-8 p-3 rounded-full bg-surface-variant/50 text-on-surface-variant hover:bg-surface-variant hover:text-on-surface transition-colors active:scale-90" onclick="toggleVoiceOverlay()">
+<span class="material-symbols-outlined">close</span>
+</button>
+<div class="flex flex-col items-center justify-center max-w-lg w-full px-6 text-center">
+<!-- Pulsing Voice Orb -->
+<div class="relative w-48 h-48 mb-12 flex items-center justify-center">
+<!-- Outer glows -->
+<div class="absolute inset-0 rounded-full bg-primary-fixed blur-3xl opacity-40 pulse-orb"></div>
+<div class="absolute inset-4 rounded-full bg-gradient-to-tr from-secondary-container to-inverse-primary blur-xl opacity-60 mix-blend-multiply pulse-orb" style="animation-delay: -1s;"></div>
+<!-- Core Orb -->
+<div class="w-24 h-24 rounded-full bg-gradient-to-br from-white via-primary-container to-primary relative z-10 shadow-[0_0_40px_rgba(245,222,205,0.8)] border border-white/40 flex items-center justify-center">
+<span class="material-symbols-outlined text-4xl text-primary/70 animate-pulse">graphic_eq</span>
+</div>
+</div>
+<h3 class="font-headline text-3xl text-primary italic mb-6">Listening...</h3>
+<!-- Real-time transcription area -->
+<div class="min-h-[80px] w-full">
+<p class="font-body text-lg text-on-surface-variant leading-relaxed animate-pulse">
+                    "I've been feeling a bit overwhelmed lately..."
+                </p>
+</div>
+<!-- Controls -->
+<div class="flex gap-6 mt-12">
+<button class="w-16 h-16 rounded-full bg-error-container text-on-error-container flex items-center justify-center shadow-lg hover:bg-error hover:text-on-error transition-colors active:scale-90" onclick="toggleVoiceOverlay()">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">close</span>
+</button>
+<button class="w-16 h-16 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-lg hover:bg-primary-dim transition-colors active:scale-90" onclick="toggleVoiceOverlay()">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">check</span>
+</button>
+</div>
+</div>
+</div>
+<script>
+        function toggleVoiceOverlay() {
+            const overlay = document.getElementById('voiceOverlay');
+            if (overlay.classList.contains('opacity-0')) {
+                overlay.classList.remove('opacity-0', 'pointer-events-none');
+                overlay.classList.add('opacity-100', 'pointer-events-auto');
+            } else {
+                overlay.classList.remove('opacity-100', 'pointer-events-auto');
+                overlay.classList.add('opacity-0', 'pointer-events-none');
+            }
+        }
+
+        // Auto-resize textarea
+        const textarea = document.querySelector('textarea');
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+            if(this.value === '') {
+                 this.style.height = 'auto';
+            }
+        });
+        
+        // Ensure scroll stays at bottom
+        const chatContainer = document.getElementById('chat-container');
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    </script>
+</body></html>

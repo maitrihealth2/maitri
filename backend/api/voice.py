@@ -5,12 +5,13 @@ Full pipeline: audio → STT → crisis → emotion → RAG → LLM → TTS → 
 
 import base64
 import traceback
+import asyncio
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
-from db.models import get_db, Session as DBSession, Message, RiskLog, User
+from db.models import get_db, Session as DBSession, Message, RiskLog, User, get_past_history_context
 from ai_engine.voice_client import transcribe_audio, synthesize_speech, get_language_prompt, get_supported_languages
 from ai_engine.sarvam_client import chat_with_maitri
 from ai_engine.emotion_detector import detect_emotion
@@ -128,18 +129,9 @@ async def handle_voice_turn(
             "emotion_emoji": "🚨", "emotion_score": 1.0, "rag_used": False,
         }
 
-    # ── Emotion ───────────────────────────────────────────────────────────────
-    print(f"[VOICE] Detecting emotion...")
-    try:
-        emotion = await detect_emotion(transcript)
-        print(f"[VOICE] Emotion: {emotion.label} ({emotion.score})")
-    except Exception as e:
-        traceback.print_exc()
-        class _Emotion:
-            label = "Neutral"; emoji = "😐"; score = 0.0
-        emotion = _Emotion()
-
-    # ── RAG ───────────────────────────────────────────────────────────────────
+    # ── Emotion + LLM concurrently ──────────────────────────────────────────
+    print(f"[VOICE] Calling LLM and Emotion Detector concurrently...")
+    
     rag_context = ""
     if RAG_AVAILABLE:
         try:
@@ -149,37 +141,39 @@ async def handle_voice_turn(
 
     lang_prompt = get_language_prompt(language)
 
-    # ── LLM ───────────────────────────────────────────────────────────────────
-    print(f"[VOICE] Calling LLM...")
+    past = db.query(Message).filter(
+        Message.session_id == session.id
+    ).order_by(Message.created_at).all()
+    history = [{"role": m.role, "content": m.content} for m in past[-20:]]
+    history.append({"role": "user", "content": transcript})
+    
+    # Bypass Context Analysis for voice turns to save latency
+    analyst_insight = ""
+
+    # Fetch previous session context for cross-session recall
+    past_history = get_past_history_context(db, current_user.id, session.id)
+
+    # Start tasks concurrently
+    emotion_task = asyncio.create_task(detect_emotion(transcript))
+    llm_task = asyncio.to_thread(
+        chat_with_maitri,
+        messages=history,
+        language=language,
+        rag_context=rag_context,
+        analyst_insight=analyst_insight,
+        language_prompt=lang_prompt,
+        past_history_context=past_history,
+    )
+
     try:
-        past = db.query(Message).filter(
-            Message.session_id == session.id
-        ).order_by(Message.created_at).all()
-        history = [{"role": m.role, "content": m.content} for m in past[-20:]]
-        history.append({"role": "user", "content": transcript})
-
-        # ── Context Analysis (Hidden) ──────────────────────────
-        print(f"[VOICE] Calling Neural Analyst...")
-        analyst_insight = await analyze_context(
-            messages=history,
-            emotion_label=emotion.label,
-            rag_context=rag_context
-        )
-        print(f"[VOICE] Analyst Insight: '{analyst_insight[:60]}...'")
-
-        ai_response = chat_with_maitri(
-            messages=history,
-            language=language,
-            rag_context=rag_context,
-            analyst_insight=analyst_insight,
-            language_prompt=lang_prompt,
-        )
+        emotion, ai_response = await asyncio.gather(emotion_task, llm_task)
+        print(f"[VOICE] Emotion: {emotion.label} ({emotion.score})")
         print(f"[VOICE] LLM response: '{ai_response[:80]}...'")
     except Exception as e:
         import traceback
         error_trace = traceback.format_exc()
-        print(f"[VOICE] LLM failed:\n{error_trace}")
-        raise HTTPException(status_code=500, detail={"message": f"LLM failed: {str(e)}", "traceback": error_trace})
+        print(f"[VOICE] Parallel processing failed:\n{error_trace}")
+        raise HTTPException(status_code=500, detail={"message": f"Parallel pipeline failed: {str(e)}", "traceback": error_trace})
 
     # ── Save to DB ────────────────────────────────────────────────────────────
     try:
@@ -196,11 +190,11 @@ async def handle_voice_turn(
     print(f"[VOICE] Calling TTS...")
     audio_b64 = ""
     try:
-        ai_emotion_result = await detect_emotion(ai_response)
+        # Reuse user's emotion to determine voice tone instead of calling HF API again
         response_audio = await synthesize_speech(
             ai_response, 
             language, 
-            emotion=ai_emotion_result.label
+            emotion=emotion.label
         )
         audio_b64 = base64.b64encode(response_audio).decode()
         print(f"[VOICE] TTS OK, audio size={len(response_audio)} bytes")

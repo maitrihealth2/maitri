@@ -14,11 +14,11 @@ from api.streaming import router as streaming_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("🚀 Starting MindBridge backend (Phase 3 — Voice)...")
+    print("Starting MindBridge backend (Phase 3 — Voice)...")
     init_db()
-    print("✅ Database ready")
+    print("Database ready")
     yield
-    print("👋 Shutting down")
+    print("Shutting down")
 
 
 app = FastAPI(
@@ -44,7 +44,7 @@ app.include_router(streaming_router)
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    print(f"❌ INTERNAL SERVER ERROR: {str(exc)}")
+    print(f"INTERNAL SERVER ERROR: {str(exc)}")
     traceback.print_exc()
     return JSONResponse(
         status_code=500,
@@ -63,7 +63,7 @@ def health():
         "service": "MindBridge",
         "version": "3.0.0",
         "features": ["text-chat", "voice-stt", "voice-tts", "rag", "emotion-detection"],
-        "ai": "sarvam-m + saarika + bulbul",
+        "ai": "sarvam-105b + saarika + bulbul",
     }
 
 

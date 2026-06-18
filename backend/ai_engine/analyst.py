@@ -10,7 +10,7 @@ load_dotenv()
 
 SARVAM_API_KEY = os.getenv("SARVAM_API_KEY")
 SARVAM_BASE_URL = "https://api.sarvam.ai/v1"
-MODEL = "sarvam-m"
+MODEL = "sarvam-105b"
 
 ANALYST_SYSTEM_PROMPT = """You are a Psychologically Neutral Context Analyst.
 Your task is to perform a deep, objective analysis of the user's current mental and emotional state to inform a therapeutic companion's response.

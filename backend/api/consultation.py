@@ -4,9 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
-from db.models import get_db, Session as DBSession, Message, RiskLog, User, get_past_history_context
+from db.models import get_db, Session as DBSession, Message, RiskLog, User
 from ai_engine.sarvam_client import chat_with_maitri
-from ai_engine.emotion_detector import detect_emotion
+from ai_engine.emotion_detector import detect_emotion, detect_emotion_heuristic
 from ai_engine.voice_client import get_language_prompt
 from services.crisis_handler import check_for_crisis
 from api.auth import get_current_user
@@ -100,22 +100,26 @@ async def send_message(
     history = [{"role": m.role, "content": m.content} for m in past[-20:]]
     history.append({"role": "user", "content": req.message})
 
-    # Fetch previous session context for cross-session recall
-    past_history = get_past_history_context(db, current_user.id, session.id)
-
     # Start tasks concurrently
     emotion_task = asyncio.create_task(detect_emotion(req.message))
+    
+    # Run local heuristic immediately (0ms latency) to inform the LLM prompt
+    heuristic_emotion = detect_emotion_heuristic(req.message)
+
     llm_task = asyncio.to_thread(
         chat_with_maitri,
         messages=history,
         language=req.language,
         rag_context=rag_context,
         language_prompt=lang_prompt,
-        past_history_context=past_history,
+        user_emotion=heuristic_emotion.label,
     )
 
     ai_response = await llm_task
-    emotion = await emotion_task
+    try:
+        emotion = await asyncio.wait_for(emotion_task, timeout=1.0)
+    except Exception:
+        emotion = heuristic_emotion
 
     # ── Save ──────────────────────────────────────────────────────────────────
     db.add(Message(session_id=session.id, role="user", content=req.message,
@@ -139,7 +143,7 @@ def get_history(
 ):
     sessions = db.query(DBSession).filter(
         DBSession.user_id == current_user.id
-    ).order_by(DBSession.started_at.desc()).limit(20).all()
+    ).order_by(DBSession.started_at.desc()).all()
     return [{"session_id": s.session_token, "started_at": s.started_at,
              "ended_at": s.ended_at, "is_crisis_flagged": s.is_crisis_flagged,
              "channel": s.channel} for s in sessions]

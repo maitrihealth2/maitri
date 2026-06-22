@@ -42,18 +42,36 @@ app.include_router(voice_router)
 app.include_router(streaming_router)
 
 
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+def log_error_to_file(msg: str):
+    with open("backend_errors.log", "a") as f:
+        f.write(msg + "\n")
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    print(f"INTERNAL SERVER ERROR: {str(exc)}")
-    traceback.print_exc()
+    err = f"INTERNAL SERVER ERROR: {str(exc)}\n{traceback.format_exc()}"
+    print(err)
+    log_error_to_file(err)
     return JSONResponse(
         status_code=500,
-        content={
-            "detail": "Internal Server Error",
-            "message": str(exc),
-            "path": request.url.path,
-        },
+        content={"detail": "Internal Server Error", "message": str(exc)},
     )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    err = f"VALIDATION ERROR: {exc.errors()}"
+    print(err)
+    log_error_to_file(err)
+    return JSONResponse(status_code=422, content={"detail": exc.errors()})
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    err = f"HTTP EXCEPTION: {exc.status_code} - {exc.detail}"
+    print(err)
+    log_error_to_file(err)
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 
 
 @app.get("/health")

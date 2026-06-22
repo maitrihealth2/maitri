@@ -6,25 +6,42 @@ from dataclasses import dataclass
 from dotenv import load_dotenv
 
 load_dotenv()
-HF_TOKEN = os.getenv("HUGGINGFACE_TOKEN")
+HF_TOKEN = os.getenv("HUGGINGFACE_TOKEN") or os.getenv("HF_TOKEN")
 HF_MODEL = "SamLowe/roberta-base-go_emotions"
 
 EMOTION_KEYWORDS = {
     "Anger": [
         "angry", "anger", "furious", "mad", "annoyed", "pissed", "hate", "irritated", "frustrated",
-        "gussa", "chidh", "naraz", "kopam", "kopamga", "frustration"
+        "gussa", "chidh", "naraz", "kopam", "kopamga", "frustration", "rage", "irritating", 
+        "fuming", "outraged", "annoy", "nonsense", "hate this", "screwing", "fed up", 
+        "pissing me off", "gusse", "krodh", "dimag kharab", "gussa aa raha", "aag babula", 
+        "naaraaz", "kovam", "erichal", "kovama", "veruppu", "kadupu", "kaduppu", "asahanam", 
+        "chiraaku", "chiraku", "krodham"
     ],
     "Anxiety": [
         "anxious", "scared", "fear", "worried", "nervous", "panic", "stress", "tense", "stressed",
-        "darr", "chinta", "fikr", "dar", "bayama", "bhayama", "tension"
+        "darr", "chinta", "fikr", "dar", "bayama", "bhayama", "tension", "shaking", "restless", 
+        "dread", "uneasy", "overthinking", "nervousness", "stressing", "heart racing", "worries", 
+        "paranoid", "anxiety", "gabrahat", "ghabrahat", "dara hua", "bechaini", "bechain", "bayam", 
+        "padhabadhapu", "kavalai", "acham", "dhik dhik", "bhyama", "bhayam", "kangaaru", "kangaru", 
+        "andholana", "andolana"
     ],
     "Sadness": [
         "sad", "depressed", "unhappy", "cry", "lonely", "hopeless", "hurt", "pain", "crying",
-        "udaas", "udas", "dukh", "rona", "akela", "sonthama", "badhava", "sadness"
+        "udaas", "udas", "dukh", "rona", "akela", "sonthama", "badhava", "sadness", "miserable", 
+        "heartbroken", "down", "grief", "gloomy", "heavy heart", "weeping", "loneliness", "empty", 
+        "shattered", "tear", "tears", "dukhi", "ro raha", "akelapan", "mayus", "gam", "dard", 
+        "sogam", "sogama", "soham", "azhugai", "varutham", "thunbam", "thuyaram", "thaniya", 
+        "thanimai", "badha", "badhaga", "dhaanyamu", "yedupu", "edupu", "ontarithanam", "ontari", 
+        "nirasah", "nirasa"
     ],
     "Positive": [
         "happy", "good", "great", "joy", "excited", "love", "blessed", "wonderful", "cool",
-        "khush", "acha", "badhiya", "santhosham", "bagundi", "awesome"
+        "khush", "acha", "badhiya", "santhosham", "bagundi", "awesome", "joyful", "glad", 
+        "cheerful", "delighted", "amazing", "fantastic", "peaceful", "calm", "satisfied", 
+        "proud", "love it", "achha", "maza", "maaza", "sundar", "anand", "anandit", "magizhchi", 
+        "nalla", "nalladhu", "arputham", "anbu", "nimmadhi", "santhoshama", "santosham", 
+        "chala bagundi", "aanandam", "prashantham", "prasantam", "manchiga", "santhoshanga"
     ],
 }
 

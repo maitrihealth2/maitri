@@ -11,10 +11,10 @@ from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
-from db.models import get_db, Session as DBSession, Message, RiskLog, User, get_past_history_context
+from db.models import get_db, Session as DBSession, Message, RiskLog, User
 from ai_engine.voice_client import transcribe_audio, synthesize_speech, get_language_prompt, get_supported_languages
 from ai_engine.sarvam_client import chat_with_maitri
-from ai_engine.emotion_detector import detect_emotion
+from ai_engine.emotion_detector import detect_emotion, detect_emotion_heuristic
 from ai_engine.analyst import analyze_context
 from services.crisis_handler import check_for_crisis
 from api.auth import get_current_user
@@ -60,8 +60,8 @@ async def transcribe(
 ):
     audio_bytes = await audio.read()
     print(f"[TRANSCRIBE] size={len(audio_bytes)} lang={language}")
-    if len(audio_bytes) < 100:
-        raise HTTPException(status_code=400, detail="Audio too short")
+    if len(audio_bytes) < 500:
+        return {"transcript": "", "language": language}
     try:
         transcript = await transcribe_audio(audio_bytes, language)
         return {"transcript": transcript, "language": language}
@@ -92,13 +92,8 @@ async def handle_voice_turn(
     print(f"[VOICE] Session DB id={session.id} OK")
 
     if not transcript or not transcript.strip():
-        print("[VOICE] Empty transcript — returning empty")
-        return {
-            "transcript": "", "response": "", "audio_b64": "",
-            "is_crisis": False, "helplines": [],
-            "emotion": "Neutral", "emotion_emoji": "😐",
-            "emotion_score": 0.0, "rag_used": False,
-        }
+        print("[VOICE] Empty transcript — treating as silence to prompt user")
+        transcript = "[Silence]"
 
     # ── Crisis check ──────────────────────────────────────────────────────────
     print(f"[VOICE] Crisis check...")
@@ -129,17 +124,15 @@ async def handle_voice_turn(
             "emotion_emoji": "🚨", "emotion_score": 1.0, "rag_used": False,
         }
 
-    # ── Emotion + LLM concurrently ──────────────────────────────────────────
-    print(f"[VOICE] Calling LLM and Emotion Detector concurrently...")
+    # ── Emotion + LLM ────────────────────────────────────────────────────────
+    print(f"[VOICE] Computing emotion heuristically and calling LLM...")
     
+    # Bypass RAG completely for voice to save 1-2 seconds of latency
     rag_context = ""
-    if RAG_AVAILABLE:
-        try:
-            rag_context = retrieve_context(transcript)
-        except Exception as e:
-            print(f"[VOICE] RAG failed (continuing): {e}")
 
+    # Append voice brevity instructions to lang_prompt
     lang_prompt = get_language_prompt(language)
+    lang_prompt += " Keep your response conversational and natural, as this is a real-time voice call. Provide clear reasoning if needed."
 
     past = db.query(Message).filter(
         Message.session_id == session.id
@@ -150,11 +143,13 @@ async def handle_voice_turn(
     # Bypass Context Analysis for voice turns to save latency
     analyst_insight = ""
 
-    # Fetch previous session context for cross-session recall
-    past_history = get_past_history_context(db, current_user.id, session.id)
-
-    # Start tasks concurrently
+    # Start deep-learning emotion detection concurrently in the background
     emotion_task = asyncio.create_task(detect_emotion(transcript))
+
+    # Call heuristic emotion locally (0ms latency) to immediately inform LLM
+    heuristic_emotion = detect_emotion_heuristic(transcript)
+
+    # Call LLM thread with custom max_tokens for speed, passing heuristic emotion
     llm_task = asyncio.to_thread(
         chat_with_maitri,
         messages=history,
@@ -162,18 +157,28 @@ async def handle_voice_turn(
         rag_context=rag_context,
         analyst_insight=analyst_insight,
         language_prompt=lang_prompt,
-        past_history_context=past_history,
+        max_tokens=500,
+        reasoning_effort=None,
+        user_emotion=heuristic_emotion.label,
     )
 
     try:
-        emotion, ai_response = await asyncio.gather(emotion_task, llm_task)
-        print(f"[VOICE] Emotion: {emotion.label} ({emotion.score})")
+        ai_response = await llm_task
+        
+        # Await the deep-learning emotion result (enforcing a strict 1.0s timeout to prevent lag)
+        try:
+            emotion = await asyncio.wait_for(emotion_task, timeout=1.0)
+            print(f"[VOICE] DL Emotion: {emotion.label} ({emotion.score:.2f})")
+        except Exception as te:
+            print(f"[VOICE] DL Emotion timeout/error ({type(te).__name__}), falling back to heuristic: {heuristic_emotion.label}")
+            emotion = heuristic_emotion
+
         print(f"[VOICE] LLM response: '{ai_response[:80]}...'")
     except Exception as e:
-        import traceback
-        error_trace = traceback.format_exc()
-        print(f"[VOICE] Parallel processing failed:\n{error_trace}")
-        raise HTTPException(status_code=500, detail={"message": f"Parallel pipeline failed: {str(e)}", "traceback": error_trace})
+        import traceback as tb
+        error_trace = tb.format_exc()
+        print(f"[VOICE] LLM call failed:\n{error_trace}")
+        raise HTTPException(status_code=500, detail={"message": f"LLM pipeline failed: {str(e)}", "traceback": error_trace})
 
     # ── Save to DB ────────────────────────────────────────────────────────────
     try:
@@ -183,7 +188,8 @@ async def handle_voice_turn(
                        content=ai_response, language=language))
         db.commit()
     except Exception as e:
-        traceback.print_exc()
+        import traceback as tb
+        tb.print_exc()
         print(f"[VOICE] DB save failed (continuing): {e}")
 
     # ── TTS ───────────────────────────────────────────────────────────────────
@@ -199,7 +205,8 @@ async def handle_voice_turn(
         audio_b64 = base64.b64encode(response_audio).decode()
         print(f"[VOICE] TTS OK, audio size={len(response_audio)} bytes")
     except Exception as e:
-        traceback.print_exc()
+        import traceback as tb
+        tb.print_exc()
         print(f"[VOICE] TTS failed: {e}")
 
     return {
@@ -228,15 +235,16 @@ async def voice_conversation(
 
     # ── Read audio ────────────────────────────────────────────────────────────
     audio_bytes = await audio.read()
-    if len(audio_bytes) < 100:
-        raise HTTPException(status_code=400, detail="Audio too short or empty")
+    if len(audio_bytes) < 500:
+        print("[VOICE] Audio too short or empty, treating as silence")
+        return await handle_voice_turn("[Silence]", session_id, language, current_user, db)
 
     # ── STT ───────────────────────────────────────────────────────────────────
     try:
         transcript = await transcribe_audio(audio_bytes, language)
     except Exception as e:
-        import traceback
-        error_trace = traceback.format_exc()
+        import traceback as tb
+        error_trace = tb.format_exc()
         raise HTTPException(status_code=500, detail={"message": f"STT failed: {str(e)}", "traceback": error_trace})
 
     return await handle_voice_turn(transcript, session_id, language, current_user, db)

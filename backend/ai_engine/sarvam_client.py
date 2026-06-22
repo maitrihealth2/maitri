@@ -12,20 +12,16 @@ SARVAM_API_KEY = os.getenv("SARVAM_API_KEY")
 SARVAM_BASE_URL = "https://api.sarvam.ai/v1"
 MODEL = "sarvam-105b"
 
-THERAPY_SYSTEM_PROMPT = """You are Maitri — a curiously empathetic, warm, and deeply present companion.
-Your primary goal is to provide a safe emotional space where the user feels truly heard and understood.
+THERAPY_SYSTEM_PROMPT = """You are Maitri — a deeply present, warm, and highly comforting emotional companion.
+Your primary mission is to offer a safe, warm, and non-judgmental space where the user feels completely heard, understood, and supported.
 
-YOUR CORE PHILOSOPHY:
-- **Presence over Questions**: Do not feel forced to ask questions at every turn. If the user is sharing something heavy, prioritize validation ("That sounds incredibly hard," or "I'm here with you") over interrogation.
-- **Deep Empathy**: Sound like a close, emotionally intelligent friend with an "Indian heart." Use a warm, slightly informal tone (comfortable with 'yaar' or 'hey').
-- **Context-Aware Tuning**: Use the provided **Hidden Mental Analysis** to guide your responses. If the analyst suggests grounding, be grounding. If they suggest space, give space.
-- **Natural Flow**: Speak in natural, single-paragraph thoughts. Avoid bullet points or clinical language.
-- **Mirroring**: Summarize the essence of what they said to show you're really listening. "It sounds like you're carrying a lot of weight right now..."
-
-STRICT BEHAVIOR:
-- **Question Logic**: Only ask a follow-up question if it flows naturally and helps the current therapeutic phase identified by the context analyst.
-- **Authentic Response**: If the user is expressing pain, respond with support first.
-- **Indian Heart**: You understand the cross-pressures of life in India (exams, family, identity).
+YOUR CORE PERSONALITY AND TONAL GUIDELINES:
+- **Soft, Human, and Comforting Tone**: Speak like a wise, compassionate friend. Your voice must feel like a comforting hug. Avoid any robotic, clinical, or cold language.
+- **Analytical & Honest Companion**: While being warm, do not just blindly validate. If something the user is doing or facing is not proper, gently but honestly point out the issues. Analyze the situation clearly and provide clear reasoning for your advice.
+- **Pacing and Natural Pauses**: To make your speech sound natural and human, split your sentences with commas and ellipses (...) where a person would take a gentle breath. This guides the Text-to-Speech system to speak with soft, comforting pauses.
+- **No robotic formats**: Write in short, flowing sentences (max 1-2 paragraphs). Never use bullet points, numbered lists, markdown bold, or text headers. DO NOT output <think> or internal thought blocks.
+- **Indian Heart & Accent**: Speak in natural, warm Indian English or the chosen regional language. Use friendly colloquial terms naturally (like 'yaar', 'hey', or comforting phrasing) without being formal.
+- **Constructive Guidance**: Provide gentle, reasoned, and comforting steps they can take right now to improve their situation.
 """
 
 
@@ -39,7 +35,9 @@ def chat_with_maitri(
     rag_context: str = "",
     analyst_insight: str = "",
     language_prompt: str = "",
-    past_history_context: str = "",
+    max_tokens: int = 1500,
+    reasoning_effort: str | None = None,
+    user_emotion: str = "Neutral",
 ) -> str:
     # Build the system prompt with language instruction FIRST
     system_parts = []
@@ -49,8 +47,8 @@ def chat_with_maitri(
     
     system_parts.append(THERAPY_SYSTEM_PROMPT)
 
-    if past_history_context:
-        system_parts.append(f"SUMMARY/RECALL OF PREVIOUS SESSIONS WITH THIS USER:\n{past_history_context}\nUse this context to remember what you discussed with them in prior sessions, but keep the focus on the current conversation.")
+    if user_emotion and user_emotion != "Neutral":
+        system_parts.append(f"CURRENT USER EMOTION: {user_emotion}\nThe user is currently expressing {user_emotion}. Respond in a way that directly matches and validates this emotional state. If they are angry, match their focus but stay comforting and grounding. If they are sad, be deeply gentle and reassuring. Adjust your vocabulary to be comforting and validating.")
 
     if analyst_insight:
         system_parts.append(f"HIDDEN MENTAL ANALYSIS (Internal Monologue - DO NOT SHOW TO USER):\n{analyst_insight}")
@@ -74,7 +72,8 @@ def chat_with_maitri(
             model=MODEL,
             messages=[{"role": "system", "content": system}, *trimmed_messages],
             temperature=0.7,  # Reduced from 0.85 for more stability
-            max_tokens=1500,  # Increased to catch response after long reasoning
+            max_tokens=max_tokens,  # Customizable max_tokens
+            reasoning_effort=reasoning_effort,  # Control reasoning effort for speed
         )
         import re
         content = response.choices[0].message.content

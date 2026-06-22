@@ -50,8 +50,25 @@ export async function getTranscript(sessionId: string) {
 }
 
 export async function sendVoiceMessage(sessionId: string, formData: FormData) {
-  const res = await api.post('/api/voice/conversation', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  })
-  return res.data
+  try {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('mb_token') : null;
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${API_URL}/api/voice/conversation`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Fetch failed with status ${res.status}: ${errText}`);
+    }
+
+    return await res.json();
+  } catch (err: any) {
+    console.error("FETCH ERROR DETAILED:", err.message);
+    throw err;
+  }
 }

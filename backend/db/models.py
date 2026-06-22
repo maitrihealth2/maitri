@@ -74,38 +74,3 @@ def get_db():
 def init_db():
     Base.metadata.create_all(bind=engine)
     print("Database tables created.")
-
-
-def get_past_history_context(db, user_id: int, current_session_id: int) -> str:
-    """Fetch recent messages from previous sessions of the user to provide cross-session context."""
-    try:
-        # Find all previous sessions of this user (ordered from newest to oldest)
-        prev_sessions = db.query(Session).filter(
-            Session.user_id == user_id,
-            Session.id != current_session_id
-        ).order_by(Session.started_at.desc()).limit(3).all()
-        
-        if not prev_sessions:
-            return ""
-            
-        prev_session_ids = [s.id for s in prev_sessions]
-        # Fetch last 10 messages from these previous sessions
-        past_messages = db.query(Message).filter(
-            Message.session_id.in_(prev_session_ids)
-        ).order_by(Message.created_at.desc()).limit(10).all()
-        
-        if not past_messages:
-            return ""
-            
-        # Sort chronologically
-        past_messages = sorted(past_messages, key=lambda m: m.created_at)
-        
-        lines = []
-        for msg in past_messages:
-            role_name = "User" if msg.role == "user" else "Maitri"
-            lines.append(f"- {role_name}: {msg.content}")
-            
-        return "\n".join(lines)
-    except Exception as e:
-        print(f"Error fetching past history context: {e}")
-        return ""

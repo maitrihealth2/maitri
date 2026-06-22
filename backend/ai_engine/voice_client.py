@@ -44,10 +44,10 @@ SUPPORTED_LANGUAGES = {
 }
 
 LANGUAGE_PROMPTS = {
-    "en-IN": "Respond in warm, natural Indian English. Conversational, not formal. Do NOT use any other language.",
-    "hi-IN": "Respond ONLY in natural Hindi (you can use common English terms like 'stress', 'family', 'problem'). Warm and conversational. Use a friendly tone like 'Yaar'.",
-    "ta-IN": "Respond ONLY in natural conversational Tamil (Tanglish is acceptable for common terms). Be warm like a close friend. Do NOT use formal Tamil or straight English.",
-    "te-IN": "Respond ONLY in natural conversational Telugu (Tenglish is acceptable for common terms). Warm and real. Do NOT use formal Telugu or straight English.",
+    "en-IN": "Respond in warm, natural Indian English. Conversational, not formal. Do NOT use any other language. NEVER use bullet points, special characters, or lists. Speak in short, naturally flowing continuous sentences.",
+    "hi-IN": "Respond ONLY in natural Hindi (you can use common English terms). Warm and conversational. Use a friendly tone. NEVER use bullet points, special characters, or lists. Speak in short, naturally flowing continuous sentences.",
+    "ta-IN": "Respond ONLY in natural conversational Tamil (Tanglish is acceptable). Be warm like a close friend. Do NOT use formal Tamil. NEVER use bullet points, special characters, or lists. Speak in short, naturally flowing continuous sentences.",
+    "te-IN": "Respond ONLY in natural conversational Telugu (Tenglish is acceptable). Warm and real. Do NOT use formal Telugu. NEVER use bullet points, special characters, or lists. Speak in short, naturally flowing continuous sentences.",
 }
 
 
@@ -142,23 +142,30 @@ async def synthesize_speech(
     """
     Convert text to speech using Sarvam Bulbul with dynamic emotional parameters.
     """
-    text = text[:500]
     lang_config = SUPPORTED_LANGUAGES.get(language, SUPPORTED_LANGUAGES["en-IN"])
     speaker = lang_config["tts_speaker_female"] if gender == "female" else lang_config["tts_speaker_male"]
 
-    # Emotional Mapping (Sarvam Bulbul-v2 specific)
-    # Pitch +/- 0.75, Pace 0.3-3, Loudness 0.3-3
+    # Emotional Mapping for Sarvam Bulbul-v3
+    # Pace: 0.5–2.0, Temperature: 0.01–1.0, Pitch: 0.5-2.0
     EMOTION_PARAMS = {
-        "Sadness": {"pitch": -0.22, "pace": 0.82, "loudness": 0.9},
-        "Anxiety": {"pitch": 0.15,  "pace": 1.25, "loudness": 1.1},
-        "Anger":   {"pitch": -0.10, "pace": 1.15, "loudness": 1.6},
-        "Positive": {"pitch": 0.35, "pace": 1.08, "loudness": 1.4},
-        "Neutral": {"pitch": 0.05,  "pace": 1.0,  "loudness": 1.4},
+        "Sadness":  {"pace": 1.05, "pitch": 0.95, "temperature": 0.75},
+        "Anxiety":  {"pace": 1.15, "pitch": 1.00, "temperature": 0.65},
+        "Anger":    {"pace": 1.25, "pitch": 1.05, "temperature": 0.80},
+        "Positive": {"pace": 1.20, "pitch": 1.05, "temperature": 0.85},
+        "Neutral":  {"pace": 1.18, "pitch": 1.00, "temperature": 0.80},
+        "Crisis":   {"pace": 1.10, "pitch": 0.95, "temperature": 0.70},
     }
     params = EMOTION_PARAMS.get(emotion, EMOTION_PARAMS["Neutral"])
-    # Bulbul v3 supports 'pace' (0.5-2.0) but NOT 'pitch' or 'loudness'
-    # These parameters are legacy from v2.
     final_pace = max(0.5, min(2.0, params["pace"]))
+    final_pitch = max(0.5, min(2.0, params["pitch"]))
+    final_temp = max(0.01, min(1.0, params["temperature"]))
+
+    # Clean text to prevent robotic pauses (e.g. from markdown or excessive punctuation)
+    import re
+    text = re.sub(r'[\n\r]+', ' ', text)  # Remove newlines
+    text = re.sub(r'\.{2,}', '.', text)   # Replace ... with a single period
+    text = re.sub(r'[*_#~`]', '', text)   # Remove markdown artifacts
+    text = text.replace('  ', ' ').strip()
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         response = await client.post(
@@ -172,6 +179,7 @@ async def synthesize_speech(
                 "target_language_code": language,
                 "speaker": speaker,
                 "pace": final_pace,
+                "temperature": final_temp,
                 "speech_sample_rate": 22050,
                 "enable_preprocessing": True,
                 "model": "bulbul:v3",

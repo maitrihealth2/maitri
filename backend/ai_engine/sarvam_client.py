@@ -76,7 +76,6 @@ def chat_with_maitri(
             messages=[{"role": "system", "content": system}, *trimmed_messages],
             temperature=0.7,  # Reduced from 0.85 for more stability
             max_tokens=max_tokens,  # Customizable max_tokens
-            reasoning_effort=reasoning_effort,  # Control reasoning effort for speed
         )
         import re
         content = response.choices[0].message.content

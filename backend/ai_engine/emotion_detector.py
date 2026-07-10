@@ -110,7 +110,7 @@ async def detect_emotion(text: str) -> EmotionResult:
     try:
         # Use Hugging Face Inference API for high-quality detection
         async with httpx.AsyncClient() as client:
-            url = f"https://api-inference.huggingface.co/models/{HF_MODEL}"
+            url = f"https://router.huggingface.co/hf-inference/models/{HF_MODEL}/pipeline/text-classification"
             headers = {"Authorization": f"Bearer {HF_TOKEN}"}
             payload = {"inputs": text, "options": {"wait_for_model": True}}
             

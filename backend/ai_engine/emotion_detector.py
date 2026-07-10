@@ -4,8 +4,11 @@ import httpx
 import asyncio
 from dataclasses import dataclass
 from dotenv import load_dotenv
+import pathlib
 
-load_dotenv()
+_BASE = pathlib.Path(__file__).resolve().parent.parent
+load_dotenv(_BASE / ".env")
+load_dotenv(_BASE / ".env.local", override=True)
 HF_TOKEN = os.getenv("HUGGINGFACE_TOKEN") or os.getenv("HF_TOKEN")
 HF_MODEL = "SamLowe/roberta-base-go_emotions"
 

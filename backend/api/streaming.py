@@ -7,11 +7,11 @@ import traceback
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
 from sqlalchemy.orm import Session
 from dotenv import load_dotenv
+import pathlib
 
-from db.models import get_db, Session as DBSession, User
-from api.voice import handle_voice_turn
-
-load_dotenv()
+_BASE = pathlib.Path(__file__).resolve().parent.parent
+load_dotenv(_BASE / ".env")
+load_dotenv(_BASE / ".env.local", override=True)
 
 router = APIRouter(prefix="/api/streaming", tags=["streaming"])
 SARVAM_API_KEY = os.getenv("SARVAM_API_KEY")

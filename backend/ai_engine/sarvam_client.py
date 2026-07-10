@@ -5,8 +5,11 @@ Maitri actually helps. Helplines only for genuine crisis.
 import os
 from openai import OpenAI
 from dotenv import load_dotenv
+import pathlib
 
-load_dotenv()
+_BASE = pathlib.Path(__file__).resolve().parent.parent
+load_dotenv(_BASE / ".env")
+load_dotenv(_BASE / ".env.local", override=True)
 
 SARVAM_API_KEY = os.getenv("SARVAM_API_KEY")
 SARVAM_BASE_URL = "https://api.sarvam.ai/v1"
@@ -43,7 +46,7 @@ def chat_with_maitri(
     system_parts = []
     
     if language_prompt:
-        system_parts.append(f"STRICT LANGUAGE INSTRUCTION: {language_prompt}\nYou MUST respond ONLY in this language/dialect.")
+        system_parts.append(f"CRITICAL OVERRIDE: {language_prompt}\nIF YOU RESPOND IN THE WRONG LANGUAGE, IT IS A CATASTROPHIC FAILURE.")
     
     system_parts.append(THERAPY_SYSTEM_PROMPT)
 
@@ -64,7 +67,7 @@ def chat_with_maitri(
     if language_prompt:
         trimmed_messages.append({
             "role": "system",
-            "content": f"CRITICAL REMINDER: You must reply to the user's last message ONLY in the requested language. Rule: {language_prompt}. Do NOT reply in the language of the older conversation history."
+            "content": f"CRITICAL REMINDER BEFORE GENERATING RESPONSE: {language_prompt}. DO NOT ignore this rule. Respond in the requested language."
         })
 
     try:

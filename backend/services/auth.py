@@ -7,8 +7,11 @@ from datetime import datetime, timedelta
 import jwt
 from jwt.exceptions import PyJWTError as JWTError
 from dotenv import load_dotenv
+import pathlib
 
-load_dotenv()
+_BASE = pathlib.Path(__file__).resolve().parent.parent
+load_dotenv(_BASE / ".env")
+load_dotenv(_BASE / ".env.local", override=True)
 
 SECRET_KEY = os.getenv("SECRET_KEY", "changethis_dev_secret")
 ALGORITHM = "HS256"

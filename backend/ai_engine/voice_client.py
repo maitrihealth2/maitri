@@ -10,8 +10,11 @@ import base64
 import subprocess
 import tempfile
 from dotenv import load_dotenv
+import pathlib
 
-load_dotenv()
+_BASE = pathlib.Path(__file__).resolve().parent.parent
+load_dotenv(_BASE / ".env")
+load_dotenv(_BASE / ".env.local", override=True)
 
 SARVAM_API_KEY = os.getenv("SARVAM_API_KEY")
 BASE_URL = "https://api.sarvam.ai"
@@ -44,10 +47,10 @@ SUPPORTED_LANGUAGES = {
 }
 
 LANGUAGE_PROMPTS = {
-    "en-IN": "Respond in warm, natural Indian English. Conversational, not formal. Do NOT use any other language. NEVER use bullet points, special characters, or lists. Speak in short, naturally flowing continuous sentences.",
-    "hi-IN": "Respond ONLY in natural Hindi (you can use common English terms). Warm and conversational. Use a friendly tone. NEVER use bullet points, special characters, or lists. Speak in short, naturally flowing continuous sentences.",
-    "ta-IN": "Respond ONLY in natural conversational Tamil (Tanglish is acceptable). Be warm like a close friend. Do NOT use formal Tamil. NEVER use bullet points, special characters, or lists. Speak in short, naturally flowing continuous sentences.",
-    "te-IN": "Respond ONLY in natural conversational Telugu (Tenglish is acceptable). Warm and real. Do NOT use formal Telugu. NEVER use bullet points, special characters, or lists. Speak in short, naturally flowing continuous sentences.",
+    "en-IN": "CRITICAL RULE: You MUST respond ONLY in English. Do NOT use any other language. Respond in warm, natural Indian English. NEVER use bullet points. Speak in short, naturally flowing sentences.",
+    "hi-IN": "CRITICAL RULE: You MUST respond ONLY in Hindi. Do NOT respond in English. Your entire response must be in Hindi. Use a warm, friendly tone. NEVER use bullet points. Speak in short, naturally flowing sentences.",
+    "ta-IN": "CRITICAL RULE: You MUST respond ONLY in Tamil. Do NOT respond in English. Your entire response must be in Tamil. Be warm like a close friend. NEVER use bullet points. Speak in short, naturally flowing sentences.",
+    "te-IN": "CRITICAL RULE: You MUST respond ONLY in Telugu. Do NOT respond in English. Your entire response must be in Telugu. Warm and real. NEVER use bullet points. Speak in short, naturally flowing sentences.",
 }
 
 

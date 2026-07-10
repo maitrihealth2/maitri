@@ -303,12 +303,21 @@ export default function VoiceModePage() {
   const startChunk = () => {
     if (!streamRef.current || !isListeningRef.current) return
     try {
-      const recorder = new MediaRecorder(streamRef.current, { mimeType: 'audio/webm' })
+      const types = ['audio/webm', 'audio/mp4', 'audio/ogg', '']
+      let selectedType = ''
+      for (const t of types) {
+        if (t === '' || MediaRecorder.isTypeSupported(t)) {
+          selectedType = t
+          break
+        }
+      }
+      const options = selectedType ? { mimeType: selectedType } : {}
+      const recorder = new MediaRecorder(streamRef.current, options)
       const chunks: BlobPart[] = []
       recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data) }
       recorder.onstop = async () => {
         if (chunks.length > 0 && isListeningRef.current) {
-          const blob = new Blob(chunks, { type: 'audio/webm' })
+          const blob = new Blob(chunks, { type: selectedType || recorder.mimeType || 'audio/webm' })
           await processVoiceTurn(blob, voiceSessionIdRef.current)
         }
       }

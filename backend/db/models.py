@@ -4,8 +4,11 @@ from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 import os
 from dotenv import load_dotenv
+import pathlib
 
-load_dotenv()
+_BASE = pathlib.Path(__file__).resolve().parent.parent
+load_dotenv(_BASE / ".env")
+load_dotenv(_BASE / ".env.local", override=True)
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./mindbridge.db")
 

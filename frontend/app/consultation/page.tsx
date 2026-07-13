@@ -13,6 +13,36 @@ interface Message {
   emotion_emoji?: string
   rag_used?: boolean
   via?: 'text' | 'voice'
+  is_new?: boolean
+}
+
+function TypewriterText({ text, animate }: { text: string; animate: boolean }) {
+  const [displayed, setDisplayed] = useState(animate ? '' : text)
+  
+  useEffect(() => {
+    if (!animate) {
+      setDisplayed(text)
+      return
+    }
+    
+    let currentText = ''
+    const words = text.split(/(\s+)/)
+    let i = 0
+    
+    const interval = setInterval(() => {
+      if (i < words.length) {
+        currentText += words[i]
+        setDisplayed(currentText)
+        i++
+      } else {
+        clearInterval(interval)
+      }
+    }, 50)
+    
+    return () => clearInterval(interval)
+  }, [text, animate])
+
+  return <>{displayed}</>
 }
 
 const QUICK_REPLIES: Record<string, { label: string; text: string }[]> = {
@@ -141,6 +171,7 @@ export default function ConsultationPage() {
         role: 'assistant', content: data.response,
         is_crisis: data.is_crisis, helplines: data.helplines,
         emotion: data.emotion, rag_used: data.rag_used,
+        is_new: true,
       }])
     } catch {
       setMessages(prev => [...prev, { role: 'assistant', content: 'Connection issue.' }])
@@ -203,7 +234,13 @@ export default function ConsultationPage() {
                           : "ai-card px-6 py-4"
                       }
                     >
-                      <p className="font-body-md leading-relaxed whitespace-pre-wrap text-sm md:text-base">{m.content}</p>
+                      <p className="font-body-md leading-relaxed whitespace-pre-wrap text-sm md:text-base">
+                        {m.role === 'assistant' ? (
+                          <TypewriterText text={m.content} animate={!!m.is_new} />
+                        ) : (
+                          m.content
+                        )}
+                      </p>
                       
                       {/* Crisis & Helplines */}
                       {m.is_crisis && m.helplines && m.helplines.length > 0 && (
